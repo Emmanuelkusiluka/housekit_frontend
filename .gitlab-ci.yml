@@ -1,0 +1,38 @@
+# GitLab CI for housekit-frontend (Housekitlab group).
+stages: [install, verify, build]
+
+default:
+  image: node:20-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@9.15.9 --activate
+    - pnpm install --frozen-lockfile
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store
+
+variables:
+  PNPM_HOME: "$CI_PROJECT_DIR/.pnpm-store"
+
+typecheck:
+  stage: verify
+  script:
+    # The typed API client is checked in and regenerable from the backend schema.
+    - pnpm --filter @housekit/api-client gen
+    - pnpm -r typecheck
+
+build:
+  stage: build
+  script:
+    - pnpm -r build
+  artifacts:
+    paths:
+      - apps/marketing/dist
+      - apps/client-app/dist
+      - apps/tenant-portal/dist
+      - apps/platform-console/dist
+    expire_in: 1 week
