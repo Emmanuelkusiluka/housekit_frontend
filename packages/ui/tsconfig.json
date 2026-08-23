@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@housekit/i18n": ["../i18n/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

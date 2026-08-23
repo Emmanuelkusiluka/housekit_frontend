@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@housekit/api-client": ["../api-client/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

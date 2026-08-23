@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+  * {
+    @apply border-line;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500/60 ring-offset-1;
+  }
+}
+
+@layer components {
+  .hk-card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .hk-input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm
+      placeholder:text-ink-subtle focus:border-brand-500 focus:ring-2 focus:ring-brand-500/40
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .hk-label {
+    @apply mb-1 block text-sm font-medium text-ink;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@housekit/ui": ["../ui/src/index.ts"],
+      "@housekit/auth": ["../auth/src/index.ts"],
+      "@housekit/api-client": ["../api-client/src/index.ts"],
+      "@housekit/i18n": ["../i18n/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

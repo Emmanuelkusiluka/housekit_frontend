@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@housekit/ui": ["../../packages/ui/src/index.ts"],
+      "@housekit/api-client": ["../../packages/api-client/src/index.ts"],
+      "@housekit/auth": ["../../packages/auth/src/index.ts"],
+      "@housekit/i18n": ["../../packages/i18n/src/index.ts"],
+      "@housekit/app-kit": ["../../packages/app-kit/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
