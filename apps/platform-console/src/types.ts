@@ -67,3 +67,28 @@ export interface Invoice {
   status: string;
   due_at: string;
 }
+
+export interface EmailDelivery {
+  id: string;
+  event: string;
+  template_key: string;
+  locale: string;
+  to_email: string;
+  subject: string;
+  status: "pending" | "sent" | "failed";
+  error: string;
+  attempts: number;
+  account_name: string;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface EmailHealth {
+  window_hours: number;
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+  failure_rate: number;
+  top_failing: { template_key: string; count: number }[];
+}

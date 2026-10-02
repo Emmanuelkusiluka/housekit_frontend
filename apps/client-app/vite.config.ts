@@ -17,5 +17,5 @@ export default defineConfig({
       "@housekit/app-kit",
     ],
   },
-  server: { port: 5174 },
+  server: { port: 5174, host: true },
 });

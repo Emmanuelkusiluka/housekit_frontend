@@ -15,7 +15,7 @@ import {
   Modal,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Home, Plus } from "lucide-react";
+import { Building2, Home, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -27,6 +27,7 @@ export function Portfolio() {
   const { user } = useAuth();
   const isOwner = user?.role === "client_admin";
   const [showHouse, setShowHouse] = useState(false);
+  const [showCompounds, setShowCompounds] = useState(false);
 
   const occ = useQuery({ queryKey: ["occupancy"], queryFn: () => req<Occupancy>(api, "GET", "/api/v1/occupancy/") });
   const houses = useQuery({
@@ -41,9 +42,14 @@ export function Portfolio() {
         description={t("nav.portfolio")}
         action={
           isOwner && (
-            <Button onClick={() => setShowHouse(true)}>
-              <Plus className="h-4 w-4" /> {t("portfolio.addHouse")}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowCompounds(true)}>
+                <Building2 className="h-4 w-4" /> {t("portfolio.compound")}
+              </Button>
+              <Button onClick={() => setShowHouse(true)}>
+                <Plus className="h-4 w-4" /> {t("portfolio.addHouse")}
+              </Button>
+            </div>
           )
         }
       />
@@ -118,7 +124,154 @@ export function Portfolio() {
       )}
 
       <AddHouseModal open={showHouse} onClose={() => setShowHouse(false)} />
+      <ManageCompoundsModal open={showCompounds} onClose={() => setShowCompounds(false)} />
     </div>
+  );
+}
+
+function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+
+  const compounds = useQuery({
+    queryKey: ["compounds"],
+    enabled: open,
+    queryFn: () => req<Paginated<Compound>>(api, "GET", "/api/v1/compounds/"),
+  });
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["compounds"] });
+    void qc.invalidateQueries({ queryKey: ["houses"] });
+  };
+
+  const create = useMutation({
+    mutationFn: () => req(api, "POST", "/api/v1/compounds/", { body: { name, address } }),
+    onSuccess: () => {
+      invalidate();
+      setName("");
+      setAddress("");
+      toast({ tone: "success", title: t("portfolio.addCompound") });
+    },
+    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
+  });
+
+  const rename = useMutation({
+    mutationFn: (v: { id: string; name: string }) =>
+      req(api, "PATCH", `/api/v1/compounds/${v.id}/`, { body: { name: v.name } }),
+    onSuccess: () => {
+      invalidate();
+      setEditing(null);
+    },
+    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => req(api, "DELETE", `/api/v1/compounds/${id}/`),
+    onSuccess: () => {
+      invalidate();
+      toast({ tone: "success", title: t("common.delete") });
+    },
+    // Backend blocks deleting a compound that still has houses — surface the reason.
+    onError: (e: unknown) =>
+      toast({
+        tone: "error",
+        title: (e as { message?: string })?.message ?? t("common.somethingWrong"),
+      }),
+  });
+
+  const list = compounds.data?.results ?? [];
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("portfolio.compound")}
+      description="Group houses into compounds. Delete is blocked while a compound still has houses."
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        {/* Add */}
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label={t("portfolio.addCompound")} className="flex-1">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("portfolio.compound")} />
+          </Field>
+          <Field label={`${t("common.optional")}`} className="flex-1">
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
+          </Field>
+          <Button loading={create.isPending} disabled={!name.trim()} onClick={() => create.mutate()}>
+            <Plus className="h-4 w-4" /> {t("common.add")}
+          </Button>
+        </div>
+
+        {/* List */}
+        <div className="divide-y divide-line border-t border-line">
+          {list.length === 0 ? (
+            <p className="py-6 text-center text-sm text-ink-muted">{t("common.noResults")}</p>
+          ) : (
+            list.map((c) => (
+              <div key={c.public_id} className="flex items-center gap-2 py-2.5">
+                {editing?.id === c.public_id ? (
+                  <>
+                    <Input
+                      className="flex-1"
+                      value={editing.name}
+                      onChange={(e) => setEditing({ id: c.public_id, name: e.target.value })}
+                    />
+                    <Button
+                      size="sm"
+                      loading={rename.isPending}
+                      disabled={!editing.name.trim()}
+                      onClick={() => rename.mutate(editing)}
+                    >
+                      {t("common.save")}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                      {t("common.cancel")}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-ink">{c.name}</p>
+                      <p className="truncate text-xs text-ink-muted">
+                        {c.house_count} {t("portfolio.title").toLowerCase()}
+                        {c.address ? ` · ${c.address}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      className="rounded-lg p-2 text-ink-muted hover:bg-canvas hover:text-ink"
+                      title={t("common.edit")}
+                      onClick={() => setEditing({ id: c.public_id, name: c.name })}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      className="rounded-lg p-2 text-ink-muted hover:bg-overdue-bg hover:text-overdue-fg disabled:opacity-40"
+                      title={t("common.delete")}
+                      disabled={remove.isPending}
+                      onClick={() => {
+                        if (window.confirm(`${t("common.delete")} "${c.name}"?`)) remove.mutate(c.public_id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 

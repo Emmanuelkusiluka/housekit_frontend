@@ -7,6 +7,7 @@ import { ConsoleLayout } from "./layout/ConsoleLayout";
 import { Accounts } from "./pages/Accounts";
 import { Applications } from "./pages/Applications";
 import { Billing } from "./pages/Billing";
+import { Mail } from "./pages/Mail";
 import { SupportDesk } from "./pages/SupportDesk";
 
 const loader = (
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/support" element={<SupportDesk />} />
         <Route path="/billing" element={<Billing />} />
+        <Route path="/mail" element={<Mail />} />
       </Route>
     </Routes>
   );

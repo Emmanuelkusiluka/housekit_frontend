@@ -1,7 +1,7 @@
 import { useAuth } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import { AppShell, Avatar, Button, LanguageSwitcher, Menu, MenuItem, type NavItem } from "@housekit/ui";
-import { Building2, CreditCard, Inbox, LifeBuoy } from "lucide-react";
+import { Building2, CreditCard, Inbox, LifeBuoy, Mail as MailIcon } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 
 export function ConsoleLayout() {
@@ -13,6 +13,7 @@ export function ConsoleLayout() {
     { to: "/accounts", label: t("nav.accounts"), icon: <Building2 className="h-5 w-5" /> },
     { to: "/support", label: t("nav.support"), icon: <LifeBuoy className="h-5 w-5" /> },
     { to: "/billing", label: t("nav.billing"), icon: <CreditCard className="h-5 w-5" /> },
+    { to: "/mail", label: "Mail", icon: <MailIcon className="h-5 w-5" /> },
   ];
 
   return (

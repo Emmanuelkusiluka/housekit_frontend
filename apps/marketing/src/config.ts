@@ -1,5 +1,8 @@
-export const API_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:8000";
-export const CLIENT_URL = (import.meta.env.VITE_CLIENT_URL as string) || "http://localhost:5174";
+// Dynamic host: derive backend + client-app URLs from the host the page was
+// opened on (localhost, a LAN IP, etc.) unless the VITE_* vars pin them.
+const _host = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}` : "http://localhost";
+export const API_URL = (import.meta.env.VITE_API_URL as string) || `${_host}:8000`;
+export const CLIENT_URL = (import.meta.env.VITE_CLIENT_URL as string) || `${_host}:5174`;
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`);
