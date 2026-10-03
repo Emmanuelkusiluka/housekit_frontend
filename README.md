@@ -48,6 +48,30 @@ Each app reads `VITE_API_URL` (default `http://localhost:8000`); see `.env.examp
 Log in with the demo credentials printed by the backend's `seed_demo`
 (`owner@demo.housekit.test` / `Passw0rd!`).
 
+## Docker
+
+The Compose stack builds each Vite application and serves its static output from
+an Nginx container. BrowserRouter routes fall back to `index.html`.
+
+```bash
+cp .env.docker.example .env
+docker compose up --build
+```
+
+The applications are then available at:
+
+- Marketing: <http://localhost:5173>
+- Client app: <http://localhost:5174>
+- Tenant portal: <http://localhost:5175>
+- Platform console: <http://localhost:5176>
+
+Stop the stack with `docker compose down` (or `pnpm docker:down`). The equivalent
+start command is `pnpm docker:up`.
+
+`VITE_API_URL` and `VITE_CLIENT_URL` are embedded into the static files at image
+build time. Update `.env` and rebuild the images when either value changes. The
+host ports can also be overridden in `.env`; see `.env.docker.example`.
+
 ## How it holds together
 
 - **Two realms** (`packages/auth`): `my.`/`tenants.` use the client realm

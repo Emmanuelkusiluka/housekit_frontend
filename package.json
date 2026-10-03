@@ -8,7 +8,9 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "gen:api": "openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.d.ts"
+    "gen:api": "openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.d.ts",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
   },
   "devDependencies": {
     "openapi-typescript": "7.4.1",

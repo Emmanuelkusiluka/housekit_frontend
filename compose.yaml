@@ -1,0 +1,46 @@
+name: housekit-frontend
+
+x-frontend: &frontend
+  restart: unless-stopped
+
+services:
+  marketing:
+    <<: *frontend
+    build:
+      context: .
+      args:
+        APP_NAME: marketing
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_CLIENT_URL: ${VITE_CLIENT_URL:-http://localhost:5174}
+    ports:
+      - "${MARKETING_PORT:-5173}:80"
+
+  client-app:
+    <<: *frontend
+    build:
+      context: .
+      args:
+        APP_NAME: client-app
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${CLIENT_APP_PORT:-5174}:80"
+
+  tenant-portal:
+    <<: *frontend
+    build:
+      context: .
+      args:
+        APP_NAME: tenant-portal
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${TENANT_PORTAL_PORT:-5175}:80"
+
+  platform-console:
+    <<: *frontend
+    build:
+      context: .
+      args:
+        APP_NAME: platform-console
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${PLATFORM_CONSOLE_PORT:-5176}:80"
