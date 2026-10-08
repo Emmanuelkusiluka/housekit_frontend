@@ -116,10 +116,13 @@ export const sw: Dictionary = {
     standalone: "Nyumba kamili",
     monthlyRent: "Kodi ya mwezi",
     label: "Jina / namba ya chumba",
+    address: "Anwani",
     occupancyRate: "Kiwango cha ukaaji",
     noHouses: "Bado hakuna nyumba. Ongeza nyumba yako ya kwanza ili kuanza.",
     noUnits: "Bado hakuna vyumba katika nyumba hii.",
     unitStatus: "Hali ya chumba",
+    editHouse: "Hariri nyumba",
+    editUnit: "Hariri chumba",
   },
   tenants: {
     title: "Wapangaji",

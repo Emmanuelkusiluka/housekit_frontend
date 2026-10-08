@@ -89,7 +89,13 @@ export function Tenants() {
     {
       key: "unit",
       header: t("portfolio.unit"),
-      render: (r) => activeByResident.get(r.public_id)?.unit_label ?? "—",
+      render: (r) => {
+        const tn = activeByResident.get(r.public_id);
+        if (!tn) return "—";
+        // Compound is optional — show whichever of compound/house/room apply.
+        const crumbs = [tn.compound_name, tn.house_name, tn.unit_label].filter(Boolean);
+        return <span>{crumbs.join(" · ")}</span>;
+      },
     },
     {
       key: "verify",

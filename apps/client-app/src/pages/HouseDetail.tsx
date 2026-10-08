@@ -11,12 +11,13 @@ import {
   Modal,
   Money,
   PageHeader,
+  Select,
   Skeleton,
   StatusPill,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, MoreVertical, Plus } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, MoreVertical, Pencil, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import type { House, Occupancy, Unit } from "../types";
@@ -29,9 +30,14 @@ export function HouseDetail() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const isOwner = user?.role === "client_admin";
+  // Owners and caretakers may both edit a house/room's details; only owners
+  // can add or remove one (matches the backend's CaretakerCanEdit policy).
+  const canEdit = isOwner || user?.role === "caretaker";
   const [showAdd, setShowAdd] = useState(false);
   const [label, setLabel] = useState("");
   const [rent, setRent] = useState("");
+  const [showEditHouse, setShowEditHouse] = useState(false);
+  const [editUnit, setEditUnit] = useState<Unit | null>(null);
 
   const house = useQuery({
     queryKey: ["house", houseId],
@@ -81,12 +87,18 @@ export function HouseDetail() {
             : undefined
         }
         action={
-          isOwner &&
-          house.data?.house_type === "room_based" && (
-            <Button onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4" /> {t("portfolio.addUnit")}
-            </Button>
-          )
+          <div className="flex gap-2">
+            {canEdit && house.data && (
+              <Button variant="outline" onClick={() => setShowEditHouse(true)}>
+                <Pencil className="h-4 w-4" /> {t("portfolio.editHouse")}
+              </Button>
+            )}
+            {isOwner && house.data?.house_type === "room_based" && (
+              <Button onClick={() => setShowAdd(true)}>
+                <Plus className="h-4 w-4" /> {t("portfolio.addUnit")}
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -108,7 +120,7 @@ export function HouseDetail() {
                     <StatusPill status={u.status} />
                   </div>
                 </div>
-                {isOwner && (
+                {canEdit && (
                   <Menu
                     trigger={
                       <button className="rounded-lg p-1 text-ink-muted hover:bg-canvas">
@@ -116,6 +128,7 @@ export function HouseDetail() {
                       </button>
                     }
                   >
+                    <MenuItem onSelect={() => setEditUnit(u)}>{t("portfolio.editUnit")}</MenuItem>
                     {(["occupied", "vacant", "maintenance"] as const).map((s) => (
                       <MenuItem key={s} onSelect={() => setStatus.mutate({ id: u.public_id, status: s })}>
                         {t(`status.${s}`)}
@@ -153,6 +166,140 @@ export function HouseDetail() {
           </Field>
         </div>
       </Modal>
+
+      {house.data && (
+        <EditHouseModal
+          house={house.data}
+          open={showEditHouse}
+          onClose={() => setShowEditHouse(false)}
+        />
+      )}
+      {editUnit && (
+        <EditUnitModal unit={editUnit} open={Boolean(editUnit)} onClose={() => setEditUnit(null)} />
+      )}
     </div>
+  );
+}
+
+function EditHouseModal({ house, open, onClose }: { house: House; open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [name, setName] = useState(house.name);
+  const [address, setAddress] = useState(house.address);
+
+  // Re-sync when a different house's edit is opened.
+  useEffect(() => {
+    if (open) {
+      setName(house.name);
+      setAddress(house.address);
+    }
+  }, [open, house]);
+
+  const save = useMutation({
+    mutationFn: () => req(api, "PATCH", `/api/v1/houses/${house.public_id}/`, { body: { name, address } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["house", house.public_id] });
+      void qc.invalidateQueries({ queryKey: ["houses"] });
+      toast({ tone: "success", title: t("portfolio.editHouse") });
+      onClose();
+    },
+    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
+  });
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("portfolio.editHouse")}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button loading={save.isPending} disabled={!name.trim()} onClick={() => save.mutate()}>
+            {t("common.save")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Field label={t("portfolio.house")}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={t("portfolio.address")}>
+          <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
+
+function EditUnitModal({ unit, open, onClose }: { unit: Unit; open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [label, setLabel] = useState(unit.label);
+  const [rent, setRent] = useState(unit.monthly_rent);
+  const [status, setStatusField] = useState(unit.status);
+
+  useEffect(() => {
+    if (open) {
+      setLabel(unit.label);
+      setRent(unit.monthly_rent);
+      setStatusField(unit.status);
+    }
+  }, [open, unit]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      req(api, "PATCH", `/api/v1/units/${unit.public_id}/`, {
+        body: { label, monthly_rent: rent, status },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["house", unit.house] });
+      void qc.invalidateQueries({ queryKey: ["occupancy"] });
+      toast({ tone: "success", title: t("portfolio.editUnit") });
+      onClose();
+    },
+    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
+  });
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("portfolio.editUnit")}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button loading={save.isPending} disabled={!label.trim() || !rent} onClick={() => save.mutate()}>
+            {t("common.save")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Field label={t("portfolio.label")}>
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} />
+        </Field>
+        <Field label={t("portfolio.monthlyRent")} hint="TZS">
+          <Input type="number" value={rent} onChange={(e) => setRent(e.target.value)} />
+        </Field>
+        <Field label={t("common.status")}>
+          <Select value={status} onChange={(e) => setStatusField(e.target.value as Unit["status"])}>
+            {(["occupied", "vacant", "maintenance"] as const).map((s) => (
+              <option key={s} value={s}>
+                {t(`status.${s}`)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+    </Modal>
   );
 }
