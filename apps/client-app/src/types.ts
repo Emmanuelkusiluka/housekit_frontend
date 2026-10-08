@@ -60,6 +60,7 @@ export interface Tenancy {
   unit: string;
   unit_label: string;
   house_name: string;
+  compound_name: string | null;
   resident: string;
   resident_name: string;
   start_date: string;

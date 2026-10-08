@@ -1271,6 +1271,13 @@
                         "description": "* `maintenance` - Maintenance\n* `utilities` - Utilities\n* `staff` - Staff\n* `fees` - Fees\n* `other` - Other"
                     },
                     {
+                        "in": "query",
+                        "name": "is_void",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "ordering",
                         "required": false,
                         "in": "query",
@@ -1509,6 +1516,57 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/expenses/{public_id}/void/": {
+            "post": {
+                "operationId": "expenses_void_create",
+                "description": "Void an expense with a reason; it leaves reports but stays as history.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Expense"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -2216,12 +2274,13 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "cancelled",
                                 "in_progress",
                                 "open",
                                 "resolved"
                             ]
                         },
-                        "description": "* `open` - Open\n* `in_progress` - In progress\n* `resolved` - Resolved"
+                        "description": "* `open` - Open\n* `in_progress` - In progress\n* `resolved` - Resolved\n* `cancelled` - Cancelled"
                     }
                 ],
                 "tags": [
@@ -2452,10 +2511,73 @@
                 }
             }
         },
+        "/api/v1/notifications/{public_id}/dismiss/": {
+            "post": {
+                "operationId": "notifications_dismiss_create",
+                "description": "Hide a notification from the bell (kept, not deleted).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/notifications/{public_id}/read/": {
             "post": {
                 "operationId": "notifications_read_create",
                 "description": "Each user sees only their own notifications (bell).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Notification"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/notifications/{public_id}/unread/": {
+            "post": {
+                "operationId": "notifications_unread_create",
+                "description": "Reverse of `read` — mark a notification unread again (§01b).",
                 "parameters": [
                     {
                         "in": "path",
@@ -2683,12 +2805,13 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "cancelled",
                                 "confirmed",
                                 "pending",
                                 "rejected"
                             ]
                         },
-                        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `rejected` - Rejected"
+                        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `rejected` - Rejected\n* `cancelled` - Cancelled"
                     }
                 ],
                 "tags": [
@@ -2914,6 +3037,57 @@
                 "tags": [
                     "payments"
                 ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RentPayment"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/{public_id}/void/": {
+            "post": {
+                "operationId": "payments_void_create",
+                "description": "Void a recorded payment: withdraws its receipt and recomputes the\ncharge balance. Owner anytime; the recorder same-day (§01b).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "responses": {
                     "200": {
                         "content": {
@@ -3584,6 +3758,37 @@
                         }
                     }
                 },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountApplication"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/applications/{public_id}/reopen/": {
+            "post": {
+                "operationId": "platform_applications_reopen_create",
+                "description": "Move a rejected application back to pending for another look (§01b).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "platform-onboarding"
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -4337,6 +4542,264 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Invoice"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/invoices/{public_id}/void/": {
+            "post": {
+                "operationId": "platform_invoices_void_create",
+                "description": "Void an invoice with a reason (super admin) — never deleted (§01b).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "platform-billing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VoidReasonRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invoice"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/mail/catalog/": {
+            "get": {
+                "operationId": "platform_mail_catalog_retrieve",
+                "description": "Read-only catalog of every template (key, base, bilingual, trigger).",
+                "tags": [
+                    "platform-mail"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/mail/deliveries/": {
+            "get": {
+                "operationId": "platform_mail_deliveries_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "event",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "locale",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "pending",
+                                "sent"
+                            ]
+                        },
+                        "description": "* `pending` - Pending\n* `sent` - Sent\n* `failed` - Failed"
+                    },
+                    {
+                        "in": "query",
+                        "name": "template_key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "platform-mail"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedEmailDeliveryList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/mail/deliveries/{public_id}/": {
+            "get": {
+                "operationId": "platform_mail_deliveries_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "platform-mail"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailDelivery"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/mail/deliveries/{public_id}/resend/": {
+            "post": {
+                "operationId": "platform_mail_deliveries_resend_create",
+                "description": "Re-queue this email, optionally to a corrected address (wrong-email fix).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "platform-mail"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResendRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResendRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResendRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailDelivery"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/mail/deliveries/health/": {
+            "get": {
+                "operationId": "platform_mail_deliveries_health_retrieve",
+                "description": "Delivery health over a window (?hours=24). Powers the Mail dashboard.",
+                "tags": [
+                    "platform-mail"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailHealth"
                                 }
                             }
                         },
@@ -5302,6 +5765,37 @@
             "get": {
                 "operationId": "portal_payment_notices_retrieve",
                 "description": "Resident-facing: submit + track own payment notices.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "tenant-portal"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentNotice"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/portal/payment-notices/{public_id}/cancel/": {
+            "post": {
+                "operationId": "portal_payment_notices_cancel_create",
+                "description": "Resident withdraws their own still-pending notice (§01b).",
                 "parameters": [
                     {
                         "in": "path",
@@ -6537,6 +7031,37 @@
                     },
                     "required": true
                 },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Tenancy"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/tenancies/{public_id}/undo_move_out/": {
+            "post": {
+                "operationId": "tenancies_undo_move_out_create",
+                "description": "Reverse a move-out done by mistake (guarded — §01b).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "public_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "tenancies"
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -8143,6 +8668,123 @@
                     }
                 }
             },
+            "EmailDelivery": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "event": {
+                        "type": "string",
+                        "maxLength": 60
+                    },
+                    "template_key": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "locale": {
+                        "type": "string",
+                        "maxLength": 5
+                    },
+                    "to_email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 254
+                    },
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/EmailDeliveryStatusEnum"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "attempts": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "provider_message_id": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "account_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "default": ""
+                    },
+                    "sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "account_name",
+                    "created_at",
+                    "id",
+                    "template_key",
+                    "to_email"
+                ]
+            },
+            "EmailDeliveryStatusEnum": {
+                "enum": [
+                    "pending",
+                    "sent",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `pending` - Pending\n* `sent` - Sent\n* `failed` - Failed"
+            },
+            "EmailHealth": {
+                "type": "object",
+                "properties": {
+                    "window_hours": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "sent": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "pending": {
+                        "type": "integer"
+                    },
+                    "failure_rate": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "top_failing": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "failed",
+                    "failure_rate",
+                    "pending",
+                    "sent",
+                    "top_failing",
+                    "total",
+                    "window_hours"
+                ]
+            },
             "Expense": {
                 "type": "object",
                 "description": "Base serializer for API-facing models: surfaces `public_id`/timestamps and\nguarantees the sequential BIGINT PK is never leaked.",
@@ -8184,6 +8826,14 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "is_void": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "void_reason": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -8196,9 +8846,11 @@
                     "compound",
                     "created_at",
                     "house",
+                    "is_void",
                     "public_id",
                     "recorded_by",
-                    "spent_on"
+                    "spent_on",
+                    "void_reason"
                 ]
             },
             "ExpenseCategoryEnum": {
@@ -8512,6 +9164,14 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "is_void": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "void_reason": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -8526,12 +9186,14 @@
                     "currency",
                     "due_at",
                     "invoice_no",
+                    "is_void",
                     "issued_at",
                     "paid_at",
                     "period_end",
                     "period_start",
                     "public_id",
-                    "status"
+                    "status",
+                    "void_reason"
                 ]
             },
             "InvoiceStatusEnum": {
@@ -8834,10 +9496,11 @@
                 "enum": [
                     "open",
                     "in_progress",
-                    "resolved"
+                    "resolved",
+                    "cancelled"
                 ],
                 "type": "string",
-                "description": "* `open` - Open\n* `in_progress` - In progress\n* `resolved` - Resolved"
+                "description": "* `open` - Open\n* `in_progress` - In progress\n* `resolved` - Resolved\n* `cancelled` - Cancelled"
             },
             "MaintenanceStatusRequest": {
                 "type": "object",
@@ -9267,6 +9930,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Compound"
+                        }
+                    }
+                }
+            },
+            "PaginatedEmailDeliveryList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EmailDelivery"
                         }
                     }
                 }
@@ -10325,10 +11019,11 @@
                 "enum": [
                     "pending",
                     "confirmed",
-                    "rejected"
+                    "rejected",
+                    "cancelled"
                 ],
                 "type": "string",
-                "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `rejected` - Rejected"
+                "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `rejected` - Rejected\n* `cancelled` - Cancelled"
             },
             "PlatformAccount": {
                 "type": "object",
@@ -10593,6 +11288,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "is_void": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "issued_at": {
                         "type": "string",
                         "format": "date-time",
@@ -10602,6 +11301,7 @@
                 "required": [
                     "amount",
                     "document_url",
+                    "is_void",
                     "issued_at",
                     "number",
                     "payment",
@@ -10847,6 +11547,14 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "is_void": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "void_reason": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -10857,10 +11565,12 @@
                     "amount",
                     "charge",
                     "created_at",
+                    "is_void",
                     "method",
                     "paid_on",
                     "public_id",
-                    "recorded_by"
+                    "recorded_by",
+                    "void_reason"
                 ]
             },
             "RentPaymentMethodEnum": {
@@ -10882,6 +11592,23 @@
                 "required": [
                     "body"
                 ]
+            },
+            "ResendRequest": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                }
             },
             "Resident": {
                 "type": "object",
@@ -11458,6 +12185,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "resident": {
                         "type": "string",
                         "readOnly": true
@@ -11517,6 +12249,7 @@
                     }
                 },
                 "required": [
+                    "compound_name",
                     "contract_months",
                     "created_at",
                     "deposit_amount",
@@ -11804,6 +12537,20 @@
                 ],
                 "type": "string",
                 "description": "* `unverified` - Unverified\n* `profile_complete` - Profile complete\n* `verified` - Verified"
+            },
+            "VoidReasonRequest": {
+                "type": "object",
+                "description": "A required, human-readable reason for any void/reversal.",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
             }
         }
     }

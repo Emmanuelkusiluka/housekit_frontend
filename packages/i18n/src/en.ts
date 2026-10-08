@@ -118,10 +118,13 @@ export const en = {
     standalone: "Whole house",
     monthlyRent: "Monthly rent",
     label: "Room name / number",
+    address: "Address",
     occupancyRate: "Occupancy",
     noHouses: "No properties yet. Add your first house to get started.",
     noUnits: "No rooms in this house yet.",
     unitStatus: "Room status",
+    editHouse: "Edit house",
+    editUnit: "Edit room",
   },
   tenants: {
     title: "Tenants",

@@ -512,6 +512,23 @@ export interface paths {
         patch: operations["expenses_partial_update"];
         trace?: never;
     };
+    "/api/v1/expenses/{public_id}/void/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Void an expense with a reason; it leaves reports but stays as history. */
+        post: operations["expenses_void_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/houses/": {
         parameters: {
             query?: never;
@@ -856,6 +873,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/{public_id}/dismiss/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Hide a notification from the bell (kept, not deleted). */
+        post: operations["notifications_dismiss_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/{public_id}/read/": {
         parameters: {
             query?: never;
@@ -867,6 +901,23 @@ export interface paths {
         put?: never;
         /** @description Each user sees only their own notifications (bell). */
         post: operations["notifications_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{public_id}/unread/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Reverse of `read` — mark a notification unread again (§01b). */
+        post: operations["notifications_unread_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1052,6 +1103,24 @@ export interface paths {
         get: operations["payments_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/{public_id}/void/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Void a recorded payment: withdraws its receipt and recomputes the
+         *     charge balance. Owner anytime; the recorder same-day (§01b). */
+        post: operations["payments_void_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1249,6 +1318,23 @@ export interface paths {
         put?: never;
         /** @description Operator triage + provisioning of applications. */
         post: operations["platform_applications_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/applications/{public_id}/reopen/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Move a rejected application back to pending for another look (§01b). */
+        post: operations["platform_applications_reopen_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1545,6 +1631,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/invoices/{public_id}/void/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Void an invoice with a reason (super admin) — never deleted (§01b). */
+        post: operations["platform_invoices_void_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/mail/catalog/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read-only catalog of every template (key, base, bilingual, trigger). */
+        get: operations["platform_mail_catalog_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/mail/deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["platform_mail_deliveries_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/mail/deliveries/{public_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["platform_mail_deliveries_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/mail/deliveries/{public_id}/resend/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Re-queue this email, optionally to a corrected address (wrong-email fix). */
+        post: operations["platform_mail_deliveries_resend_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/mail/deliveries/health/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Delivery health over a window (?hours=24). Powers the Mail dashboard. */
+        get: operations["platform_mail_deliveries_health_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/packages/": {
         parameters: {
             query?: never;
@@ -1805,6 +1991,23 @@ export interface paths {
         get: operations["portal_payment_notices_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/payment-notices/{public_id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Resident withdraws their own still-pending notice (§01b). */
+        post: operations["portal_payment_notices_cancel_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2296,6 +2499,23 @@ export interface paths {
          *     `account` is injected on create from context — never trusted from the body.
          *     URLs and lookups use `public_id`. */
         post: operations["tenancies_move_out_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenancies/{public_id}/undo_move_out/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Reverse a move-out done by mistake (guarded — §01b). */
+        post: operations["tenancies_undo_move_out_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2833,6 +3053,45 @@ export interface components {
         DeclineLeaseRequest: {
             reason?: string;
         };
+        EmailDelivery: {
+            readonly id: string;
+            event?: string;
+            template_key: string;
+            locale?: string;
+            /** Format: email */
+            to_email: string;
+            subject?: string;
+            status?: components["schemas"]["EmailDeliveryStatusEnum"];
+            error?: string;
+            /** Format: int64 */
+            attempts?: number;
+            provider_message_id?: string;
+            /** @default  */
+            readonly account_name: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `pending` - Pending
+         *     * `sent` - Sent
+         *     * `failed` - Failed
+         * @enum {string}
+         */
+        EmailDeliveryStatusEnum: "pending" | "sent" | "failed";
+        EmailHealth: {
+            window_hours: number;
+            total: number;
+            sent: number;
+            failed: number;
+            pending: number;
+            /** Format: double */
+            failure_rate: number;
+            top_failing: {
+                [key: string]: unknown;
+            }[];
+        };
         /** @description Base serializer for API-facing models: surfaces `public_id`/timestamps and
          *     guarantees the sequential BIGINT PK is never leaked. */
         Expense: {
@@ -2848,6 +3107,8 @@ export interface components {
             /** Format: uri */
             attachment?: string | null;
             readonly recorded_by: string;
+            readonly is_void: boolean;
+            readonly void_reason: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -2955,6 +3216,8 @@ export interface components {
             readonly due_at: string;
             /** Format: date-time */
             readonly paid_at: string | null;
+            readonly is_void: boolean;
+            readonly void_reason: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -3058,9 +3321,10 @@ export interface components {
          * @description * `open` - Open
          *     * `in_progress` - In progress
          *     * `resolved` - Resolved
+         *     * `cancelled` - Cancelled
          * @enum {string}
          */
-        MaintenanceStatusEnum: "open" | "in_progress" | "resolved";
+        MaintenanceStatusEnum: "open" | "in_progress" | "resolved" | "cancelled";
         MaintenanceStatusRequest: {
             status: components["schemas"]["MaintenanceStatusStatusEnum"];
         };
@@ -3233,6 +3497,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Compound"][];
+        };
+        PaginatedEmailDeliveryList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["EmailDelivery"][];
         };
         PaginatedExpenseList: {
             /** @example 123 */
@@ -3664,9 +3943,10 @@ export interface components {
          * @description * `pending` - Pending
          *     * `confirmed` - Confirmed
          *     * `rejected` - Rejected
+         *     * `cancelled` - Cancelled
          * @enum {string}
          */
-        PaymentNoticeStatusEnum: "pending" | "confirmed" | "rejected";
+        PaymentNoticeStatusEnum: "pending" | "confirmed" | "rejected" | "cancelled";
         /** @description Base serializer for API-facing models: surfaces `public_id`/timestamps and
          *     guarantees the sequential BIGINT PK is never leaked. */
         PlatformAccount: {
@@ -3749,6 +4029,7 @@ export interface components {
             /** Format: decimal */
             readonly amount: string;
             readonly document_url: string;
+            readonly is_void: boolean;
             /** Format: date-time */
             readonly issued_at: string;
         };
@@ -3837,6 +4118,8 @@ export interface components {
             /** Format: date */
             paid_on: string;
             readonly recorded_by: string;
+            readonly is_void: boolean;
+            readonly void_reason: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -3848,6 +4131,9 @@ export interface components {
         RentPaymentMethodEnum: "cash" | "mobile_money";
         ReplyRequest: {
             body: string;
+        };
+        ResendRequest: {
+            to?: string;
         };
         /** @description Base serializer for API-facing models: surfaces `public_id`/timestamps and
          *     guarantees the sequential BIGINT PK is never leaked. */
@@ -4020,6 +4306,7 @@ export interface components {
             readonly unit: string;
             readonly unit_label: string;
             readonly house_name: string;
+            readonly compound_name: string | null;
             readonly resident: string;
             readonly resident_name: string;
             /** Format: date */
@@ -4148,6 +4435,10 @@ export interface components {
          * @enum {string}
          */
         VerificationStatusEnum: "unverified" | "profile_complete" | "verified";
+        /** @description A required, human-readable reason for any void/reversal. */
+        VoidReasonRequest: {
+            reason: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -4923,6 +5214,7 @@ export interface operations {
                  *     * `fees` - Fees
                  *     * `other` - Other */
                 category?: "fees" | "maintenance" | "other" | "staff" | "utilities";
+                is_void?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -5055,6 +5347,33 @@ export interface operations {
                 "application/json": components["schemas"]["PatchedExpenseRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["PatchedExpenseRequest"];
                 "multipart/form-data": components["schemas"]["PatchedExpenseRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Expense"];
+                };
+            };
+        };
+    };
+    expenses_void_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidReasonRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VoidReasonRequest"];
+                "multipart/form-data": components["schemas"]["VoidReasonRequest"];
             };
         };
         responses: {
@@ -5438,8 +5757,9 @@ export interface operations {
                 search?: string;
                 /** @description * `open` - Open
                  *     * `in_progress` - In progress
-                 *     * `resolved` - Resolved */
-                status?: "in_progress" | "open" | "resolved";
+                 *     * `resolved` - Resolved
+                 *     * `cancelled` - Cancelled */
+                status?: "cancelled" | "in_progress" | "open" | "resolved";
             };
             header?: never;
             path?: never;
@@ -5579,7 +5899,51 @@ export interface operations {
             };
         };
     };
+    notifications_dismiss_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     notifications_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
+                };
+            };
+        };
+    };
+    notifications_unread_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -5720,8 +6084,9 @@ export interface operations {
                 search?: string;
                 /** @description * `pending` - Pending
                  *     * `confirmed` - Confirmed
-                 *     * `rejected` - Rejected */
-                status?: "confirmed" | "pending" | "rejected";
+                 *     * `rejected` - Rejected
+                 *     * `cancelled` - Cancelled */
+                status?: "cancelled" | "confirmed" | "pending" | "rejected";
             };
             header?: never;
             path?: never;
@@ -5850,6 +6215,33 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RentPayment"];
+                };
+            };
+        };
+    };
+    payments_void_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidReasonRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VoidReasonRequest"];
+                "multipart/form-data": components["schemas"]["VoidReasonRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -6245,6 +6637,27 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["RejectApplicationRequest"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountApplication"];
+                };
+            };
+        };
+    };
+    platform_applications_reopen_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -6678,6 +7091,153 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Invoice"];
+                };
+            };
+        };
+    };
+    platform_invoices_void_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidReasonRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VoidReasonRequest"];
+                "multipart/form-data": components["schemas"]["VoidReasonRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+        };
+    };
+    platform_mail_catalog_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    platform_mail_deliveries_list: {
+        parameters: {
+            query?: {
+                event?: string;
+                locale?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description * `pending` - Pending
+                 *     * `sent` - Sent
+                 *     * `failed` - Failed */
+                status?: "failed" | "pending" | "sent";
+                template_key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEmailDeliveryList"];
+                };
+            };
+        };
+    };
+    platform_mail_deliveries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailDelivery"];
+                };
+            };
+        };
+    };
+    platform_mail_deliveries_resend_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ResendRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResendRequest"];
+                "multipart/form-data": components["schemas"]["ResendRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailDelivery"];
+                };
+            };
+        };
+    };
+    platform_mail_deliveries_health_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailHealth"];
                 };
             };
         };
@@ -7209,6 +7769,27 @@ export interface operations {
         };
     };
     portal_payment_notices_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentNotice"];
+                };
+            };
+        };
+    };
+    portal_payment_notices_cancel_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -7978,6 +8559,27 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["MoveOutRequest"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenancy"];
+                };
+            };
+        };
+    };
+    tenancies_undo_move_out_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
