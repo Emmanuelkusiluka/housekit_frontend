@@ -31,6 +31,7 @@ export interface Unit {
   public_id: string;
   house: string;
   house_name: string;
+  compound_name: string | null;
   kind: "room" | "whole_house";
   label: string;
   monthly_rent: string;
@@ -79,6 +80,8 @@ export interface Lease {
   tenancy: string;
   resident_name: string;
   unit_label: string;
+  house_name: string;
+  compound_name: string | null;
   status: "draft" | "sent" | "signed" | "declined";
   terms: Record<string, unknown>;
   document_url: string | null;
@@ -91,6 +94,7 @@ export interface LedgerRow {
   resident_name: string;
   unit_label: string;
   house_name: string;
+  compound_name: string | null;
   charge_public_id: string | null;
   period_month: string | null;
   amount_due: string | null;
@@ -104,6 +108,8 @@ export interface RentCharge {
   tenancy: string;
   resident_name: string;
   unit_label: string;
+  house_name: string;
+  compound_name: string | null;
   period_month: string;
   amount_due: string;
   paid_total: string;
@@ -118,6 +124,8 @@ export interface Receipt {
   number: string;
   resident_name: string;
   unit_label: string;
+  house_name: string;
+  compound_name: string | null;
   amount: string;
   document_url: string | null;
   issued_at: string;
@@ -128,6 +136,8 @@ export interface PaymentNotice {
   tenancy: string;
   resident_name: string;
   unit_label: string;
+  house_name: string;
+  compound_name: string | null;
   amount: string;
   channel: string;
   reference: string;
@@ -154,6 +164,7 @@ export interface MaintenanceRequest {
   unit_label: string | null;
   house: string;
   house_name: string;
+  compound_name: string | null;
   raised_by: string;
   title: string;
   description: string;

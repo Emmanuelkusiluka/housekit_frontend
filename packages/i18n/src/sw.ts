@@ -33,6 +33,8 @@ export const sw: Dictionary = {
     retry: "Jaribu tena",
     somethingWrong: "Kuna tatizo limetokea. Tafadhali jaribu tena.",
     noResults: "Bado hakuna kitu.",
+    viewAll: "Ona zote",
+    searchPlaceholder: "Tafuta…",
   },
   nav: {
     dashboard: "Nyumbani",
@@ -139,6 +141,7 @@ export const sw: Dictionary = {
     deposit: "Amana",
     upfront: "Malipo ya awali",
     noTenants: "Bado hakuna wapangaji.",
+    previousTenants: "Wapangaji wa zamani",
     moveOutDate: "Tarehe ya kuondoka",
   },
   leases: {

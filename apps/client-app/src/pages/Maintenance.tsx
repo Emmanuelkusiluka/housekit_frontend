@@ -1,4 +1,4 @@
-import { Paginated, req, useApi, useAuth, useToast } from "@housekit/app-kit";
+import { Paginated, req, roomBreadcrumb, useApi, useAuth, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
   Button,
@@ -78,8 +78,7 @@ export function Maintenance() {
                     <StatusPill status={m.priority === "high" ? "overdue" : "pending"} label={t(`maintenance.${m.priority}`)} />
                   </div>
                   <p className="text-sm text-ink-muted">
-                    {m.house_name}
-                    {m.unit_label ? ` · ${m.unit_label}` : ""} — {m.raised_by}
+                    {roomBreadcrumb(m.compound_name, m.house_name, m.unit_label)} — {m.raised_by}
                   </p>
                   {m.description && <p className="mt-1 text-sm text-ink">{m.description}</p>}
                 </div>

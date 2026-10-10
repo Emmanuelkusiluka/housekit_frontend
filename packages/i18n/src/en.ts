@@ -35,6 +35,8 @@ export const en = {
     retry: "Try again",
     somethingWrong: "Something went wrong. Please try again.",
     noResults: "Nothing here yet.",
+    viewAll: "View all",
+    searchPlaceholder: "Search…",
   },
   nav: {
     dashboard: "Home",
@@ -141,6 +143,7 @@ export const en = {
     deposit: "Deposit",
     upfront: "Upfront payment",
     noTenants: "No tenants yet.",
+    previousTenants: "Previous tenants",
     moveOutDate: "Move-out date",
   },
   leases: {

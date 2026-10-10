@@ -9234,6 +9234,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "house_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "status": {
                         "allOf": [
                             {
@@ -9263,8 +9272,10 @@
                     }
                 },
                 "required": [
+                    "compound_name",
                     "created_at",
                     "document_url",
+                    "house_name",
                     "public_id",
                     "resident_name",
                     "signatures",
@@ -9339,6 +9350,10 @@
                     "house_name": {
                         "type": "string"
                     },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "charge_public_id": {
                         "type": "string",
                         "nullable": true
@@ -9372,6 +9387,7 @@
                     "amount_due",
                     "balance",
                     "charge_public_id",
+                    "compound_name",
                     "house_name",
                     "is_overdue",
                     "period_month",
@@ -9413,6 +9429,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "raised_by": {
                         "type": "string",
                         "readOnly": true
@@ -9448,6 +9469,7 @@
                     }
                 },
                 "required": [
+                    "compound_name",
                     "created_at",
                     "house",
                     "house_name",
@@ -10972,6 +10994,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "house_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "amount": {
                         "type": "string",
                         "format": "decimal",
@@ -11006,6 +11037,8 @@
                 "required": [
                     "amount",
                     "channel",
+                    "compound_name",
+                    "house_name",
                     "public_id",
                     "rejection_reason",
                     "resident_name",
@@ -11278,6 +11311,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "house_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "amount": {
                         "type": "string",
                         "format": "decimal",
@@ -11300,7 +11342,9 @@
                 },
                 "required": [
                     "amount",
+                    "compound_name",
                     "document_url",
+                    "house_name",
                     "is_void",
                     "issued_at",
                     "number",
@@ -11446,6 +11490,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "house_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "period_month": {
                         "type": "string",
                         "format": "date",
@@ -11490,7 +11543,9 @@
                 "required": [
                     "amount_due",
                     "balance",
+                    "compound_name",
                     "created_at",
+                    "house_name",
                     "is_overdue",
                     "paid_total",
                     "period_month",
@@ -12369,6 +12424,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "compound_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "kind": {
                         "$ref": "#/components/schemas/KindEnum"
                     },
@@ -12391,6 +12451,7 @@
                     }
                 },
                 "required": [
+                    "compound_name",
                     "created_at",
                     "house",
                     "house_name",
