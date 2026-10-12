@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Paginated, req, useApi, useAuth, useToast } from "@housekit/app-kit";
+import { Paginated, req, roomBreadcrumb, useApi, useAuth, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
   Badge,
@@ -13,12 +13,12 @@ import {
   MenuItem,
   Modal,
   PageHeader,
-  Select,
   StatusPill,
+  TabsBar,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreVertical, UserPlus, Users } from "lucide-react";
-import { useState } from "react";
+import { MoreVertical, Search, UserPlus, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -37,6 +37,10 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+// A resident has no active tenancy once they've moved out — they belong in
+// the "Previous tenants" tab instead of cluttering the active roster.
+type TenantTab = "active" | "previous";
+
 export function Tenants() {
   const { t } = useTranslation();
   const api = useApi();
@@ -45,18 +49,35 @@ export function Tenants() {
   const { toast } = useToast();
   const isOwner = user?.role === "client_admin";
   const [showReg, setShowReg] = useState(false);
+  const [tab, setTab] = useState<TenantTab>("active");
 
   const residents = useQuery({
     queryKey: ["residents"],
-    queryFn: () => req<Paginated<Resident>>(api, "GET", "/api/v1/residents/"),
+    queryFn: () => req<Paginated<Resident>>(api, "GET", "/api/v1/residents/", { params: { query: { page_size: 100 } } }),
   });
+  // All tenancies (not just active) — "previous tenants" needs the moved-out
+  // ones too, to show where they used to live and when they left.
   const tenancies = useQuery({
-    queryKey: ["tenancies", "active"],
-    queryFn: () => req<Paginated<Tenancy>>(api, "GET", "/api/v1/tenancies/", { params: { query: { status: "active" } } }),
+    queryKey: ["tenancies", "all"],
+    queryFn: () => req<Paginated<Tenancy>>(api, "GET", "/api/v1/tenancies/", { params: { query: { page_size: 100 } } }),
   });
 
   const activeByResident = new Map<string, Tenancy>();
-  tenancies.data?.results.forEach((tn) => activeByResident.set(tn.resident, tn));
+  const lastMovedOutByResident = new Map<string, Tenancy>();
+  tenancies.data?.results.forEach((tn) => {
+    if (tn.status === "active") {
+      activeByResident.set(tn.resident, tn);
+    } else {
+      const existing = lastMovedOutByResident.get(tn.resident);
+      if (!existing || (tn.move_out_date ?? "") > (existing.move_out_date ?? "")) {
+        lastMovedOutByResident.set(tn.resident, tn);
+      }
+    }
+  });
+
+  const allResidents = residents.data?.results ?? [];
+  const activeResidents = allResidents.filter((r) => activeByResident.has(r.public_id));
+  const previousResidents = allResidents.filter((r) => !activeByResident.has(r.public_id));
 
   const verify = useMutation({
     mutationFn: (id: string) => req(api, "POST", `/api/v1/residents/${id}/verify/`),
@@ -84,7 +105,7 @@ export function Tenants() {
     },
   });
 
-  const cols: Column<Resident>[] = [
+  const activeCols: Column<Resident>[] = [
     { key: "name", header: t("tenants.residentName"), render: (r) => <span className="font-medium">{r.full_name}</span> },
     {
       key: "unit",
@@ -92,9 +113,7 @@ export function Tenants() {
       render: (r) => {
         const tn = activeByResident.get(r.public_id);
         if (!tn) return "—";
-        // Compound is optional — show whichever of compound/house/room apply.
-        const crumbs = [tn.compound_name, tn.house_name, tn.unit_label].filter(Boolean);
-        return <span>{crumbs.join(" · ")}</span>;
+        return <span>{roomBreadcrumb(tn.compound_name, tn.house_name, tn.unit_label)}</span>;
       },
     },
     {
@@ -139,6 +158,26 @@ export function Tenants() {
     },
   ];
 
+  const previousCols: Column<Resident>[] = [
+    { key: "name", header: t("tenants.residentName"), render: (r) => <span className="font-medium">{r.full_name}</span> },
+    {
+      key: "unit",
+      header: t("portfolio.unit"),
+      render: (r) => {
+        const tn = lastMovedOutByResident.get(r.public_id);
+        if (!tn) return "—";
+        return <span className="text-ink-muted">{roomBreadcrumb(tn.compound_name, tn.house_name, tn.unit_label)}</span>;
+      },
+    },
+    {
+      key: "movedOut",
+      header: t("tenants.moveOutDate"),
+      render: (r) => lastMovedOutByResident.get(r.public_id)?.move_out_date ?? "—",
+    },
+  ];
+
+  const active = tab === "active";
+
   return (
     <div>
       <PageHeader
@@ -149,13 +188,32 @@ export function Tenants() {
           </Button>
         }
       />
-      <DataTable
-        columns={cols}
-        rows={residents.data?.results ?? []}
-        keyOf={(r) => r.public_id}
-        loading={residents.isLoading}
-        empty={<EmptyState icon={<Users className="h-10 w-10" />} title={t("tenants.noTenants")} />}
+      <TabsBar
+        className="mb-4"
+        value={tab}
+        onValueChange={(v) => setTab(v as TenantTab)}
+        tabs={[
+          { value: "active", label: `${t("tenants.title")} (${activeResidents.length})` },
+          { value: "previous", label: `${t("tenants.previousTenants")} (${previousResidents.length})` },
+        ]}
       />
+      {active ? (
+        <DataTable
+          columns={activeCols}
+          rows={activeResidents}
+          keyOf={(r) => r.public_id}
+          loading={residents.isLoading || tenancies.isLoading}
+          empty={<EmptyState icon={<Users className="h-10 w-10" />} title={t("tenants.noTenants")} />}
+        />
+      ) : (
+        <DataTable
+          columns={previousCols}
+          rows={previousResidents}
+          keyOf={(r) => r.public_id}
+          loading={residents.isLoading || tenancies.isLoading}
+          empty={<EmptyState icon={<Users className="h-10 w-10" />} title={t("common.noResults")} />}
+        />
+      )}
       <RegisterModal open={showReg} onClose={() => setShowReg(false)} />
     </div>
   );
@@ -170,15 +228,9 @@ function RegisterModal({ open, onClose }: { open: boolean; onClose: () => void }
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { contract_months: 12 } });
-
-  const vacant = useQuery({
-    queryKey: ["units", "vacant"],
-    enabled: open,
-    queryFn: () =>
-      req<Paginated<Unit>>(api, "GET", "/api/v1/units/", { params: { query: { status: "vacant" } } }),
-  });
 
   const submit = useMutation({
     mutationFn: async (v: FormValues) => {
@@ -202,7 +254,7 @@ function RegisterModal({ open, onClose }: { open: boolean; onClose: () => void }
       });
     },
     onSuccess: () => {
-      ["residents", "tenancies", "occupancy", "houses"].forEach((k) =>
+      ["residents", "tenancies", "occupancy", "houses", "units"].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] }),
       );
       toast({ tone: "success", title: t("tenants.register") });
@@ -241,14 +293,10 @@ function RegisterModal({ open, onClose }: { open: boolean; onClose: () => void }
           <Input type="email" {...register("email")} />
         </Field>
         <Field label={t("portfolio.unit")} error={errors.unit_public_id?.message} className="sm:col-span-2">
-          <Select {...register("unit_public_id")}>
-            <option value="">—</option>
-            {vacant.data?.results.map((u) => (
-              <option key={u.public_id} value={u.public_id}>
-                {u.house_name} · {u.label} ({u.monthly_rent})
-              </option>
-            ))}
-          </Select>
+          <UnitPicker
+            open={open}
+            onChange={(unitId) => setValue("unit_public_id", unitId, { shouldValidate: true })}
+          />
         </Field>
         <Field label={t("tenants.startDate")} error={errors.start_date?.message}>
           <Input type="date" {...register("start_date")} />
@@ -264,5 +312,100 @@ function RegisterModal({ open, onClose }: { open: boolean; onClose: () => void }
         </Field>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Searchable, debounced vacant-room picker. Replaces a plain <select> that
+ * silently truncated to one page of results on large portfolios — this
+ * queries the backend as the owner types instead of loading everything.
+ */
+function UnitPicker({ open, onChange }: { open: boolean; onChange: (unitPublicId: string) => void }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [focused, setFocused] = useState(false);
+  const [selected, setSelected] = useState<Unit | null>(null);
+  const blurTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  // Clear any stale selection when the modal is reopened.
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setDebounced("");
+      setSelected(null);
+    }
+  }, [open]);
+
+  const results = useQuery({
+    queryKey: ["units", "vacant", "search", debounced],
+    enabled: open,
+    queryFn: () =>
+      req<Paginated<Unit>>(api, "GET", "/api/v1/units/", {
+        params: { query: { status: "vacant", search: debounced, page_size: 20, ordering: "house__name,label" } },
+      }),
+  });
+
+  const pick = (u: Unit) => {
+    setSelected(u);
+    setQuery("");
+    onChange(u.public_id);
+    setFocused(false);
+  };
+
+  const showDropdown = focused && !selected;
+  const units = results.data?.results ?? [];
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+        <Input
+          className="pl-9"
+          placeholder={t("common.searchPlaceholder")}
+          value={selected ? roomBreadcrumb(selected.compound_name, selected.house_name, selected.label) : query}
+          onChange={(e) => {
+            setSelected(null);
+            onChange("");
+            setQuery(e.target.value);
+          }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            // Delay so a click on a dropdown item registers before we close it.
+            blurTimer.current = setTimeout(() => setFocused(false), 150);
+          }}
+        />
+      </div>
+      {showDropdown && (
+        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-pop">
+          {results.isLoading ? (
+            <p className="px-3 py-2 text-sm text-ink-muted">{t("common.loading")}</p>
+          ) : units.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-ink-muted">{t("common.noResults")}</p>
+          ) : (
+            units.map((u) => (
+              <button
+                key={u.public_id}
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-canvas"
+                onClick={() => {
+                  if (blurTimer.current) clearTimeout(blurTimer.current);
+                  pick(u);
+                }}
+              >
+                <span className="text-ink">{roomBreadcrumb(u.compound_name, u.house_name, u.label)}</span>
+                <span className="text-ink-muted">{u.monthly_rent}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }

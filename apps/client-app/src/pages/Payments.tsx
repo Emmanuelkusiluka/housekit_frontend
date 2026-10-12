@@ -1,4 +1,4 @@
-import { Paginated, req, useApi, useToast } from "@housekit/app-kit";
+import { Paginated, req, roomBreadcrumb, useApi, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
   Badge,
@@ -65,7 +65,7 @@ function LedgerTab() {
 
   const cols: Column<LedgerRow>[] = [
     { key: "resident", header: t("tenants.residentName"), render: (r) => <span className="font-medium">{r.resident_name}</span> },
-    { key: "unit", header: t("portfolio.unit"), render: (r) => r.unit_label },
+    { key: "unit", header: t("portfolio.unit"), render: (r) => roomBreadcrumb(r.compound_name, r.house_name, r.unit_label) },
     { key: "due", header: t("payments.amount"), render: (r) => <Money value={r.amount_due} /> },
     {
       key: "balance",
@@ -163,7 +163,7 @@ function PayModal({ row, month, onClose }: { row: LedgerRow; month: string; onCl
       open
       onOpenChange={(o) => !o && onClose()}
       title={t("payments.record")}
-      description={`${row.resident_name} · ${row.unit_label}`}
+      description={`${row.resident_name} · ${roomBreadcrumb(row.compound_name, row.house_name, row.unit_label)}`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -247,7 +247,7 @@ function NoticesTab() {
           <CardBody className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-medium text-ink">
-                {n.resident_name} · {n.unit_label}
+                {n.resident_name} · {roomBreadcrumb(n.compound_name, n.house_name, n.unit_label)}
               </p>
               <p className="text-sm text-ink-muted">
                 <Money value={n.amount} emphasis /> · {n.channel} · {n.reference || "—"}
@@ -279,6 +279,7 @@ function ReceiptsTab() {
   const cols: Column<Receipt>[] = [
     { key: "no", header: t("payments.receiptNo"), render: (r) => <span className="font-medium">{r.number}</span> },
     { key: "resident", header: t("tenants.residentName"), render: (r) => r.resident_name },
+    { key: "unit", header: t("portfolio.unit"), render: (r) => roomBreadcrumb(r.compound_name, r.house_name, r.unit_label) },
     { key: "amount", header: t("payments.amount"), render: (r) => <Money value={r.amount} /> },
     {
       key: "dl",

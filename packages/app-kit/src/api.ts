@@ -28,3 +28,17 @@ export interface Paginated<T> {
   previous: string | null;
   results: T[];
 }
+
+/**
+ * "Compound · House · Room" — the one place a room/unit identifier gets
+ * stitched together. A bare room label ("14") means nothing to an owner with
+ * many properties; always show it with enough context to place it. Compound
+ * is optional on a house, so this degrades to "House · Room" when absent.
+ */
+export function roomBreadcrumb(
+  compoundName: string | null | undefined,
+  houseName: string | null | undefined,
+  unitLabel: string | null | undefined,
+): string {
+  return [compoundName, houseName, unitLabel].filter(Boolean).join(" · ");
+}

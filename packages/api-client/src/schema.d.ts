@@ -3242,6 +3242,8 @@ export interface components {
             readonly tenancy: string;
             readonly resident_name: string;
             readonly unit_label: string;
+            readonly house_name: string;
+            readonly compound_name: string | null;
             readonly status: components["schemas"]["LeaseStatusEnum"];
             readonly terms: unknown;
             readonly document_url: string;
@@ -3274,6 +3276,7 @@ export interface components {
             resident_name: string;
             unit_label: string;
             house_name: string;
+            compound_name: string | null;
             charge_public_id: string | null;
             /** Format: date */
             period_month: string | null;
@@ -3298,6 +3301,7 @@ export interface components {
             readonly unit_label: string;
             readonly house: string;
             readonly house_name: string;
+            readonly compound_name: string | null;
             readonly raised_by: string;
             title: string;
             description?: string;
@@ -3930,6 +3934,8 @@ export interface components {
             readonly tenancy: string;
             readonly resident_name: string;
             readonly unit_label: string;
+            readonly house_name: string;
+            readonly compound_name: string | null;
             /** Format: decimal */
             amount: string;
             channel: string;
@@ -4026,6 +4032,8 @@ export interface components {
             readonly payment: string;
             readonly resident_name: string;
             readonly unit_label: string;
+            readonly house_name: string;
+            readonly compound_name: string | null;
             /** Format: decimal */
             readonly amount: string;
             readonly document_url: string;
@@ -4085,6 +4093,8 @@ export interface components {
             readonly resident_name: string;
             readonly unit: string;
             readonly unit_label: string;
+            readonly house_name: string;
+            readonly compound_name: string | null;
             /** Format: date */
             readonly period_month: string;
             /** Format: decimal */
@@ -4367,6 +4377,7 @@ export interface components {
             readonly public_id: string;
             readonly house: string;
             readonly house_name: string;
+            readonly compound_name: string | null;
             kind?: components["schemas"]["KindEnum"];
             label: string;
             /** Format: decimal */

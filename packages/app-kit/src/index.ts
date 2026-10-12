@@ -1,5 +1,5 @@
 export { AppProviders, useApi } from "./providers";
-export { req, type Paginated } from "./api";
+export { req, roomBreadcrumb, type Paginated } from "./api";
 export { LoginScreen } from "./LoginScreen";
 export { NotificationsButton } from "./NotificationsButton";
 export { SupportWidget } from "./SupportWidget";

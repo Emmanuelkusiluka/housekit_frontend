@@ -1,4 +1,4 @@
-import { Paginated, req, useApi, useToast } from "@housekit/app-kit";
+import { Paginated, req, roomBreadcrumb, useApi, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import { Button, Column, DataTable, EmptyState, PageHeader, StatusPill } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +28,7 @@ export function Leases() {
 
   const cols: Column<Lease>[] = [
     { key: "resident", header: t("tenants.residentName"), render: (l) => <span className="font-medium">{l.resident_name}</span> },
-    { key: "unit", header: t("portfolio.unit"), render: (l) => l.unit_label },
+    { key: "unit", header: t("portfolio.unit"), render: (l) => roomBreadcrumb(l.compound_name, l.house_name, l.unit_label) },
     { key: "status", header: t("common.status"), render: (l) => <StatusPill status={l.status} /> },
     {
       key: "actions",
