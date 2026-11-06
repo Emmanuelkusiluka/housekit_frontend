@@ -3,18 +3,21 @@ import { useAuth } from "@housekit/auth";
 import { useTranslation } from "@housekit/i18n";
 import { Button, Card, CardBody, Field, Input, LanguageSwitcher } from "@housekit/ui";
 import { useState, type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export function LoginScreen({
   title,
   subtitle,
   footer,
   accent = "Housekit",
+  passwordLinks = false,
 }: {
   title?: string;
   subtitle?: string;
   footer?: ReactNode;
   accent?: string;
+  /** Show "Forgot password?" and "Have an invite code?" (client realm only). */
+  passwordLinks?: boolean;
 }) {
   const { t } = useTranslation();
   const { login } = useAuth();
@@ -66,6 +69,11 @@ export function LoginScreen({
               />
             </Field>
             <Field label={t("auth.password")} htmlFor="password">
+              {passwordLinks && (
+                <Link to="/forgot-password" className="float-right -mt-6 text-xs font-medium text-brand-600 hover:underline">
+                  {t("auth.forgotPassword")}
+                </Link>
+              )}
               <Input
                 id="password"
                 type="password"
@@ -80,6 +88,14 @@ export function LoginScreen({
               {t("auth.login")}
             </Button>
           </form>
+          {passwordLinks && (
+            <p className="mt-4 text-center text-sm text-ink-muted">
+              {t("ux.gotInvite")}{" "}
+              <Link to="/set-password" className="font-medium text-brand-600 hover:underline">
+                {t("ux.setPassword")}
+              </Link>
+            </p>
+          )}
           {footer && <div className="mt-4 text-center text-sm text-ink-muted">{footer}</div>}
         </CardBody>
       </Card>

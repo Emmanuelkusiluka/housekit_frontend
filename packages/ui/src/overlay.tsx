@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { CheckCircle2, Info, Loader2, X, XCircle } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -55,6 +55,112 @@ export function Modal({
           </div>
           {children}
           {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/* ── ConfirmDialog ──────────────────────────────────────────────────────── */
+/**
+ * The one way to confirm a destructive or hard-to-undo action. Replaces
+ * `window.confirm` (which is unstyled, untranslated and easy to tap through on
+ * mobile). Optionally asks for a reason (voids) or a typed confirmation word.
+ */
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel = "Cancel",
+  tone = "danger",
+  loading,
+  onConfirm,
+  reasonLabel,
+  reasonRequired = false,
+  media,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: ReactNode;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "danger" | "primary";
+  loading?: boolean;
+  /** Receives the typed reason when `reasonLabel` is set. */
+  onConfirm: (reason: string) => void;
+  reasonLabel?: string;
+  reasonRequired?: boolean;
+  /** Avatar / icon shown next to the title (e.g. the person being removed). */
+  media?: ReactNode;
+  children?: ReactNode;
+}) {
+  const [reason, setReason] = useState("");
+  const blocked = reasonRequired && !reason.trim();
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) setReason("");
+        onOpenChange(o);
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40 animate-fade-in" />
+        <Dialog.Content
+          role="alertdialog"
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2",
+            "rounded-2xl bg-surface p-5 shadow-pop animate-slide-up focus:outline-none",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {media}
+            <div className="min-w-0">
+              <Dialog.Title className="font-display text-lg font-semibold text-ink">{title}</Dialog.Title>
+              {description && (
+                <Dialog.Description asChild>
+                  <div className="mt-1 text-sm text-ink-muted">{description}</div>
+                </Dialog.Description>
+              )}
+            </div>
+          </div>
+          {children && <div className="mt-3">{children}</div>}
+          {reasonLabel && (
+            <div className="mt-4 space-y-1">
+              <label className="hk-label" htmlFor="confirm-reason">
+                {reasonLabel}
+                {reasonRequired && <span className="ml-0.5 text-overdue">*</span>}
+              </label>
+              <input
+                id="confirm-reason"
+                className="hk-input"
+                value={reason}
+                autoFocus
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <Dialog.Close className="inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium text-ink hover:bg-canvas">
+              {cancelLabel}
+            </Dialog.Close>
+            <button
+              type="button"
+              disabled={loading || blocked}
+              onClick={() => onConfirm(reason.trim())}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:pointer-events-none disabled:opacity-60",
+                tone === "danger" ? "bg-overdue hover:bg-red-700" : "bg-brand-600 hover:bg-brand-700",
+              )}
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+              {confirmLabel}
+            </button>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

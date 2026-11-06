@@ -1,9 +1,12 @@
-import { req, useApi, useAuth, useToast } from "@housekit/app-kit";
+import { fetchAll, matchesSearch, req, useApi, useAuth, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
+  Avatar,
   Button,
   Card,
   CardBody,
+  ConfirmDialog,
+  EmptyState,
   Field,
   Input,
   Menu,
@@ -11,16 +14,17 @@ import {
   Modal,
   Money,
   PageHeader,
+  SearchInput,
   Select,
   Skeleton,
   StatusPill,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, MoreVertical, Pencil, Plus } from "lucide-react";
+import { ChevronLeft, DoorOpen, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
-import type { House, Occupancy, Unit } from "../types";
+import type { House, Occupancy, Tenancy, Unit } from "../types";
 
 export function HouseDetail() {
   const { houseId } = useParams();
@@ -38,6 +42,10 @@ export function HouseDetail() {
   const [rent, setRent] = useState("");
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editUnit, setEditUnit] = useState<Unit | null>(null);
+  const [deleteUnit, setDeleteUnit] = useState<Unit | null>(null);
+  const [deleteHouse, setDeleteHouse] = useState(false);
+  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
   const house = useQuery({
     queryKey: ["house", houseId],
@@ -50,6 +58,50 @@ export function HouseDetail() {
   const occ = useQuery({
     queryKey: ["house", houseId, "occupancy"],
     queryFn: () => req<Occupancy>(api, "GET", `/api/v1/houses/${houseId}/occupancy/`),
+  });
+
+  // Who lives where — so each room card shows its tenant, not just "occupied".
+  const tenancies = useQuery({
+    queryKey: ["tenancies", "active"],
+    queryFn: () => fetchAll<Tenancy>(api, "/api/v1/tenancies/", { status: "active" }),
+  });
+  const allUnits = units.data ?? [];
+  const tenantByUnit = new Map<string, Tenancy>();
+  tenancies.data?.forEach((tn) => tenantByUnit.set(tn.unit, tn));
+
+  const removeUnit = useMutation({
+    mutationFn: (id: string) => req(api, "DELETE", `/api/v1/units/${id}/`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["house", houseId] });
+      void qc.invalidateQueries({ queryKey: ["houses"] });
+      void qc.invalidateQueries({ queryKey: ["occupancy"] });
+      setDeleteUnit(null);
+      toast({ tone: "success", title: t("ux.deleted") });
+    },
+  });
+  const removeHouse = useMutation({
+    // A property added by mistake: clear its (empty) rooms, then the house.
+    // The backend refuses any room with tenant/rent history and says why, so
+    // real records can never be lost this way.
+    mutationFn: async () => {
+      for (const u of allUnits) await req(api, "DELETE", `/api/v1/units/${u.public_id}/`);
+      await req(api, "DELETE", `/api/v1/houses/${houseId}/`);
+    },
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: ["house", houseId] });
+      setDeleteHouse(false);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["houses"] });
+      void qc.invalidateQueries({ queryKey: ["occupancy"] });
+      toast({ tone: "success", title: t("ux.deleted") });
+      navigate("/portfolio");
+    },
+  });
+
+  const shownUnits = allUnits.filter((u) => {
+    const tn = tenantByUnit.get(u.public_id);
+    return matchesSearch(search, [u.label, tn?.resident_name, t(`status.${u.status}`)]);
   });
 
   const addUnit = useMutation({
@@ -98,6 +150,17 @@ export function HouseDetail() {
                 <Plus className="h-4 w-4" /> {t("portfolio.addUnit")}
               </Button>
             )}
+            {isOwner && house.data && (
+              <Button
+                variant="ghost"
+                className="text-overdue-fg hover:bg-overdue-bg"
+                aria-label={t("ux.deleteHouse")}
+                title={t("ux.deleteHouse")}
+                onClick={() => setDeleteHouse(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         }
       />
@@ -108,39 +171,113 @@ export function HouseDetail() {
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
+      ) : allUnits.length === 0 ? (
+        <EmptyState
+          icon={<DoorOpen />}
+          title={t("portfolio.noUnits")}
+          description={isOwner ? t("ux.noUnitsBody") : undefined}
+          action={
+            isOwner &&
+            house.data?.house_type === "room_based" && (
+              <Button onClick={() => setShowAdd(true)}>
+                <Plus className="h-4 w-4" /> {t("portfolio.addUnit")}
+              </Button>
+            )
+          }
+        />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {units.data?.map((u) => (
-            <Card key={u.public_id}>
-              <CardBody className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium text-ink">{u.label}</p>
-                  <Money value={u.monthly_rent} className="text-sm text-ink-muted" />
-                  <div className="mt-2">
-                    <StatusPill status={u.status} />
-                  </div>
-                </div>
-                {canEdit && (
-                  <Menu
-                    trigger={
-                      <button className="rounded-lg p-1 text-ink-muted hover:bg-canvas">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    }
-                  >
-                    <MenuItem onSelect={() => setEditUnit(u)}>{t("portfolio.editUnit")}</MenuItem>
-                    {(["occupied", "vacant", "maintenance"] as const).map((s) => (
-                      <MenuItem key={s} onSelect={() => setStatus.mutate({ id: u.public_id, status: s })}>
-                        {t(`status.${s}`)}
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                )}
-              </CardBody>
-            </Card>
-          ))}
-        </div>
+        <>
+          {allUnits.length > 6 && (
+            <SearchInput
+              className="mb-4 max-w-md"
+              value={search}
+              onChange={setSearch}
+              placeholder={t("ux.searchRooms")}
+            />
+          )}
+          {shownUnits.length === 0 && (
+            <EmptyState
+              compact
+              icon={<DoorOpen />}
+              title={t("ux.noMatchTitle", { query: search })}
+              action={
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  {t("ux.clearSearch")}
+                </Button>
+              }
+            />
+          )}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {shownUnits.map((u) => {
+              const tn = tenantByUnit.get(u.public_id);
+              return (
+                <Card key={u.public_id}>
+                  <CardBody className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">{u.label}</p>
+                      <Money value={u.monthly_rent} className="text-sm text-ink-muted" />
+                      <div className="mt-2">
+                        <StatusPill status={u.status} />
+                      </div>
+                      {tn && (
+                        <Link
+                          to="/tenants"
+                          className="mt-3 flex items-center gap-2 text-sm text-ink hover:text-brand-700"
+                        >
+                          <Avatar name={tn.resident_name} size="sm" />
+                          <span className="truncate">{tn.resident_name}</span>
+                        </Link>
+                      )}
+                    </div>
+                    {canEdit && (
+                      <Menu
+                        trigger={
+                          <button className="rounded-lg p-1 text-ink-muted hover:bg-canvas" aria-label={t("common.actions")}>
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        }
+                      >
+                        <MenuItem onSelect={() => setEditUnit(u)}>{t("portfolio.editUnit")}</MenuItem>
+                        {(["occupied", "vacant", "maintenance"] as const).map((st) => (
+                          <MenuItem key={st} onSelect={() => setStatus.mutate({ id: u.public_id, status: st })}>
+                            {t(`status.${st}`)}
+                          </MenuItem>
+                        ))}
+                        {isOwner && (
+                          <MenuItem danger onSelect={() => setDeleteUnit(u)}>
+                            {t("ux.deleteRoom")}
+                          </MenuItem>
+                        )}
+                      </Menu>
+                    )}
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
+
+      <ConfirmDialog
+        open={!!deleteUnit}
+        onOpenChange={(o) => !o && setDeleteUnit(null)}
+        title={t("ux.deleteNamed", { name: deleteUnit?.label ?? "" })}
+        description={
+          deleteUnit && tenantByUnit.has(deleteUnit.public_id) ? t("ux.roomHasTenant") : t("ux.deleteRoomBody")
+        }
+        confirmLabel={t("ux.deleteRoom")}
+        loading={removeUnit.isPending}
+        onConfirm={() => deleteUnit && removeUnit.mutate(deleteUnit.public_id)}
+      />
+      <ConfirmDialog
+        open={deleteHouse}
+        onOpenChange={setDeleteHouse}
+        title={t("ux.deleteNamed", { name: house.data?.name ?? "" })}
+        description={allUnits.length > 0 ? t("ux.houseHasRooms", { count: allUnits.length }) : t("ux.deleteHouseBody")}
+        confirmLabel={t("ux.deleteHouse")}
+        loading={removeHouse.isPending}
+        onConfirm={() => removeHouse.mutate()}
+      />
 
       <Modal
         open={showAdd}
@@ -205,7 +342,6 @@ function EditHouseModal({ house, open, onClose }: { house: House; open: boolean;
       toast({ tone: "success", title: t("portfolio.editHouse") });
       onClose();
     },
-    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
   });
 
   return (
@@ -264,7 +400,6 @@ function EditUnitModal({ unit, open, onClose }: { unit: Unit; open: boolean; onC
       toast({ tone: "success", title: t("portfolio.editUnit") });
       onClose();
     },
-    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
   });
 
   return (

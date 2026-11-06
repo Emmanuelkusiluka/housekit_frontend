@@ -1,4 +1,4 @@
-import { LoginScreen } from "@housekit/app-kit";
+import { LoginScreen, PasswordResetScreen } from "@housekit/app-kit";
 import { RequireAuth } from "@housekit/auth";
 import { Spinner } from "@housekit/ui";
 import { Route, Routes } from "react-router-dom";
@@ -18,7 +18,9 @@ const loader = (
 export function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginScreen accent="Housekit" />} />
+      <Route path="/login" element={<LoginScreen accent="Housekit" passwordLinks />} />
+      <Route path="/forgot-password" element={<PasswordResetScreen />} />
+      <Route path="/set-password" element={<PasswordResetScreen mode="invite" />} />
       <Route
         element={
           <RequireAuth fallback={loader}>

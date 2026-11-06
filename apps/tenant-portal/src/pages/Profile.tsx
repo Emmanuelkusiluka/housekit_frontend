@@ -1,4 +1,4 @@
-import { req, useApi, useToast } from "@housekit/app-kit";
+import { ChangePasswordCard, req, useApi, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import { Button, Card, CardBody, Field, Input, PageHeader, Skeleton, StatusPill } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,6 +73,9 @@ export function Profile() {
         <Button loading={save.isPending} onClick={() => save.mutate()}>
           {t("common.save")}
         </Button>
+      </div>
+      <div className="mt-6">
+        <ChangePasswordCard />
       </div>
     </div>
   );

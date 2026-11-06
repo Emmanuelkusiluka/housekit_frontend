@@ -1,4 +1,4 @@
-import { Paginated, req, useApi, useAuth, useToast } from "@housekit/app-kit";
+import { fetchAll, matchesSearch, req, useApi, useAuth, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
   Button,
@@ -9,10 +9,12 @@ import {
   Input,
   Money,
   PageHeader,
+  SearchInput,
   Select,
   Skeleton,
   StatusPill,
   Modal,
+  ConfirmDialog,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Home, Pencil, Plus, Trash2 } from "lucide-react";
@@ -30,10 +32,13 @@ export function Portfolio() {
   const [showCompounds, setShowCompounds] = useState(false);
 
   const occ = useQuery({ queryKey: ["occupancy"], queryFn: () => req<Occupancy>(api, "GET", "/api/v1/occupancy/") });
+  const [search, setSearch] = useState("");
+  // All houses — the default page size (25) silently hid the rest.
   const houses = useQuery({
-    queryKey: ["houses"],
-    queryFn: () => req<Paginated<House>>(api, "GET", "/api/v1/houses/"),
+    queryKey: ["houses", "all"],
+    queryFn: () => fetchAll<House>(api, "/api/v1/houses/", { ordering: "name" }),
   });
+  const shown = (houses.data ?? []).filter((h) => matchesSearch(search, [h.name, h.address, h.compound_name]));
 
   return (
     <div>
@@ -81,15 +86,43 @@ export function Portfolio() {
         </div>
       )}
 
+      {(houses.data?.length ?? 0) > 6 && (
+        <SearchInput
+          className="mb-4 max-w-md"
+          value={search}
+          onChange={setSearch}
+          placeholder={t("ux.searchHouses")}
+        />
+      )}
+
       {houses.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="hk-card space-y-3 p-5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-48" />
+              <div className="flex -space-x-2">
+                {Array.from({ length: 4 }).map((_, k) => (
+                  <Skeleton key={k} className="h-7 w-7 rounded-full ring-2 ring-surface" />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
-      ) : houses.data && houses.data.results.length > 0 ? (
+      ) : search && shown.length === 0 ? (
+        <EmptyState
+          icon={<Building2 />}
+          title={t("ux.noMatchTitle", { query: search })}
+          description={t("ux.noMatchHouses")}
+          action={
+            <Button variant="outline" onClick={() => setSearch("")}>
+              {t("ux.clearSearch")}
+            </Button>
+          }
+        />
+      ) : shown.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {houses.data.results.map((h) => (
+          {shown.map((h) => (
             <Link key={h.public_id} to={`/portfolio/houses/${h.public_id}`}>
               <Card className="h-full transition-shadow hover:shadow-pop">
                 <CardBody>
@@ -117,8 +150,9 @@ export function Portfolio() {
         </div>
       ) : (
         <EmptyState
-          icon={<Building2 className="h-10 w-10" />}
-          title={t("portfolio.noHouses")}
+          icon={<Building2 />}
+          title={isOwner ? t("portfolio.noHouses") : t("ux.noAssignedHouses")}
+          description={isOwner ? t("ux.housesEmptyBody") : t("ux.noAssignedHousesBody")}
           action={isOwner && <Button onClick={() => setShowHouse(true)}>{t("portfolio.addHouse")}</Button>}
         />
       )}
@@ -137,11 +171,12 @@ function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () =>
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState<Compound | null>(null);
 
   const compounds = useQuery({
     queryKey: ["compounds"],
     enabled: open,
-    queryFn: () => req<Paginated<Compound>>(api, "GET", "/api/v1/compounds/"),
+    queryFn: () => fetchAll<Compound>(api, "/api/v1/compounds/", { ordering: "name" }),
   });
 
   const invalidate = () => {
@@ -157,7 +192,6 @@ function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () =>
       setAddress("");
       toast({ tone: "success", title: t("portfolio.addCompound") });
     },
-    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
   });
 
   const rename = useMutation({
@@ -167,24 +201,20 @@ function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () =>
       invalidate();
       setEditing(null);
     },
-    onError: () => toast({ tone: "error", title: t("common.somethingWrong") }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => req(api, "DELETE", `/api/v1/compounds/${id}/`),
     onSuccess: () => {
       invalidate();
-      toast({ tone: "success", title: t("common.delete") });
+      setDeleting(null);
+      toast({ tone: "success", title: t("ux.deleted") });
     },
-    // Backend blocks deleting a compound that still has houses — surface the reason.
-    onError: (e: unknown) =>
-      toast({
-        tone: "error",
-        title: (e as { message?: string })?.message ?? t("common.somethingWrong"),
-      }),
+    // Backend blocks deleting a compound that still has houses — the global
+    // error toast surfaces its reason, so no local onError (avoids a double toast).
   });
 
-  const list = compounds.data?.results ?? [];
+  const list = compounds.data ?? [];
 
   return (
     <Modal
@@ -258,9 +288,7 @@ function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () =>
                       className="rounded-lg p-2 text-ink-muted hover:bg-overdue-bg hover:text-overdue-fg disabled:opacity-40"
                       title={t("common.delete")}
                       disabled={remove.isPending}
-                      onClick={() => {
-                        if (window.confirm(`${t("common.delete")} "${c.name}"?`)) remove.mutate(c.public_id);
-                      }}
+                      onClick={() => setDeleting(c)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -271,6 +299,15 @@ function ManageCompoundsModal({ open, onClose }: { open: boolean; onClose: () =>
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title={t("ux.deleteNamed", { name: deleting?.name ?? "" })}
+        description={deleting && deleting.house_count > 0 ? t("ux.compoundHasHouses") : t("ux.deleteCompoundBody")}
+        confirmLabel={t("common.delete")}
+        loading={remove.isPending}
+        onConfirm={() => deleting && remove.mutate(deleting.public_id)}
+      />
     </Modal>
   );
 }
@@ -285,7 +322,7 @@ function AddHouseModal({ open, onClose }: { open: boolean; onClose: () => void }
   const compounds = useQuery({
     queryKey: ["compounds"],
     enabled: open,
-    queryFn: () => req<Paginated<Compound>>(api, "GET", "/api/v1/compounds/"),
+    queryFn: () => fetchAll<Compound>(api, "/api/v1/compounds/", { ordering: "name" }),
   });
 
   const create = useMutation({
@@ -348,7 +385,7 @@ function AddHouseModal({ open, onClose }: { open: boolean; onClose: () => void }
             onChange={(e) => setForm({ ...form, compound_public_id: e.target.value })}
           >
             <option value="">{t("common.none")}</option>
-            {compounds.data?.results.map((c) => (
+            {compounds.data?.map((c) => (
               <option key={c.public_id} value={c.public_id}>
                 {c.name}
               </option>

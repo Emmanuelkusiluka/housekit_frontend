@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { cn } from "./cn";
-import { Skeleton } from "./primitives";
+import { PersonRowSkeleton } from "./primitives";
 
 export interface Column<T> {
   key: string;
@@ -29,15 +29,7 @@ export function DataTable<T>({
   empty?: ReactNode;
   className?: string;
 }) {
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <PersonRowSkeleton rows={6} />;
   if (rows.length === 0 && empty) return <>{empty}</>;
 
   return (
@@ -59,9 +51,17 @@ export function DataTable<T>({
               <tr
                 key={keyOf(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" && e.target === e.currentTarget) onRowClick(row);
+                      }
+                    : undefined
+                }
                 className={cn(
                   "border-b border-line last:border-0",
-                  onRowClick && "cursor-pointer hover:bg-canvas/60",
+                  onRowClick && "cursor-pointer hover:bg-canvas/60 focus-visible:bg-brand-50 focus-visible:outline-none",
                 )}
               >
                 {columns.map((c) => (
@@ -81,6 +81,15 @@ export function DataTable<T>({
           <div
             key={keyOf(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
+            role={onRowClick ? "button" : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
+            onKeyDown={
+              onRowClick
+                ? (e) => {
+                    if (e.key === "Enter" && e.target === e.currentTarget) onRowClick(row);
+                  }
+                : undefined
+            }
             className={cn("hk-card p-4", onRowClick && "active:bg-canvas")}
           >
             {columns

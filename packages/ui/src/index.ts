@@ -15,10 +15,16 @@ export {
   Skeleton,
   Spinner,
   Avatar,
+  AvatarStack,
+  GhostAvatar,
+  PersonCell,
+  PersonRowSkeleton,
+  SearchInput,
+  initialsOf,
   EmptyState,
 } from "./primitives";
 export { StatusPill, statusTone, Money } from "./status";
-export { Modal, Drawer, ToastProvider, useToast } from "./overlay";
+export { Modal, Drawer, ConfirmDialog, ToastProvider, useToast } from "./overlay";
 export {
   TabsBar,
   Stepper,

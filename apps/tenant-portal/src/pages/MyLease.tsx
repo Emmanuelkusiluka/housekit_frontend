@@ -66,7 +66,7 @@ export function MyLease() {
     return (
       <div>
         <PageHeader title={t("nav.myLease")} />
-        <EmptyState icon={<FileSignature className="h-10 w-10" />} title={t("common.noResults")} />
+        <EmptyState icon={<FileSignature />} title={t("ux.portalNoLease")} description={t("ux.portalNoLeaseBody")} />
       </div>
     );
 

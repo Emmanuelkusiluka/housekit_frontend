@@ -6,13 +6,15 @@ import {
   Drawer,
   EmptyState,
   Menu,
+  SearchInput,
   MenuItem,
   PageHeader,
+  PersonCell,
   StatusPill,
 } from "@housekit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, MoreVertical } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { AccountHealth, PlatformAccount } from "../types";
 
@@ -25,9 +27,21 @@ export function Accounts() {
   const isSuper = user?.role === "super_admin";
   const [healthFor, setHealthFor] = useState<PlatformAccount | null>(null);
 
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(search.trim()), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+  // Server-side search (business name / slug) over every account, not just
+  // the first page.
   const accounts = useQuery({
-    queryKey: ["platform-accounts"],
-    queryFn: () => req<Paginated<PlatformAccount>>(api, "GET", "/api/v1/platform/accounts/"),
+    queryKey: ["platform-accounts", debounced],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      req<Paginated<PlatformAccount>>(api, "GET", "/api/v1/platform/accounts/", {
+        params: { query: { search: debounced || undefined, page_size: 100 } },
+      }),
   });
 
   const lifecycle = useMutation({
@@ -51,7 +65,7 @@ export function Accounts() {
   });
 
   const cols: Column<PlatformAccount>[] = [
-    { key: "name", header: t("nav.accounts"), render: (a) => <span className="font-medium">{a.business_name}</span> },
+    { key: "name", header: t("nav.accounts"), render: (a) => <PersonCell name={a.business_name} /> },
     { key: "pkg", header: t("subscription.currentPlan"), render: (a) => a.package ?? "—" },
     { key: "units", header: t("portfolio.units"), hideOnMobile: true, render: (a) => `${a.unit_count}` },
     { key: "status", header: t("common.status"), render: (a) => <StatusPill status={a.status} /> },
@@ -85,7 +99,11 @@ export function Accounts() {
 
   return (
     <div>
-      <PageHeader title={t("nav.accounts")} description="Account Lifecycle" />
+      <PageHeader
+        title={t("nav.accounts")}
+        description={accounts.data ? `${accounts.data.count} ${t("nav.accounts").toLowerCase()}` : "Account Lifecycle"}
+      />
+      <SearchInput className="mb-4 max-w-md" value={search} onChange={setSearch} placeholder={t("ux.searchAccounts")} />
       <DataTable
         columns={cols}
         rows={accounts.data?.results ?? []}
