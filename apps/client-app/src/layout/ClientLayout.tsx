@@ -85,7 +85,7 @@ export function ClientLayout() {
           <LanguageSwitcher />
           <Menu
             trigger={
-              <button className="rounded-full">
+              <button className="rounded-full" aria-label={t("ux.accountMenu")}>
                 <Avatar name={user?.full_name ?? "?"} />
               </button>
             }
@@ -94,6 +94,7 @@ export function ClientLayout() {
               <p className="font-medium text-ink">{user?.full_name}</p>
               <p className="text-xs text-ink-muted">{user?.email}</p>
             </div>
+            <MenuItem onSelect={() => navigate("/account")}>{t("ux.accountSettings")}</MenuItem>
             <MenuItem danger onSelect={() => logout()}>
               {t("common.signOut")}
             </MenuItem>

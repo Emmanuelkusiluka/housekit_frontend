@@ -1,4 +1,4 @@
-import { Paginated, req, useApi } from "@housekit/app-kit";
+import { Paginated, fetchAll, req, useApi } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import { Button, Card, CardBody, PageHeader, Stepper } from "@housekit/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ export function Setup() {
   const { t } = useTranslation();
   const api = useApi();
 
-  const houses = useQuery({ queryKey: ["houses"], queryFn: () => req<Paginated<House>>(api, "GET", "/api/v1/houses/") });
+  const houses = useQuery({ queryKey: ["houses", "all"], queryFn: () => fetchAll<House>(api, "/api/v1/houses/", { ordering: "name" }) });
   const occ = useQuery({ queryKey: ["occupancy"], queryFn: () => req<Occupancy>(api, "GET", "/api/v1/occupancy/") });
   const staff = useQuery({ queryKey: ["users"], queryFn: () => req<Paginated<StaffUser>>(api, "GET", "/api/v1/users/") });
   const tenancies = useQuery({
@@ -19,7 +19,7 @@ export function Setup() {
     queryFn: () => req<Paginated<Tenancy>>(api, "GET", "/api/v1/tenancies/"),
   });
 
-  const hasHouse = (houses.data?.count ?? 0) > 0;
+  const hasHouse = (houses.data?.length ?? 0) > 0;
   const hasUnit = (occ.data?.total ?? 0) > 0;
   const hasCaretaker = (staff.data?.results.filter((u) => u.role === "caretaker").length ?? 0) > 0;
   const hasTenant = (tenancies.data?.count ?? 0) > 0;

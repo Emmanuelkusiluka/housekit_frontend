@@ -1,8 +1,10 @@
+import { PasswordResetScreen } from "@housekit/app-kit";
 import { RequireAuth, RequireRole } from "@housekit/auth";
 import { Spinner } from "@housekit/ui";
 import { Route, Routes } from "react-router-dom";
 
 import { ClientLayout } from "./layout/ClientLayout";
+import { Account } from "./pages/Account";
 import { Caretakers } from "./pages/Caretakers";
 import { Dashboard } from "./pages/Dashboard";
 import { Expenses } from "./pages/Expenses";
@@ -32,6 +34,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<PasswordResetScreen />} />
+      <Route path="/set-password" element={<PasswordResetScreen mode="invite" />} />
       <Route
         element={
           <RequireAuth fallback={loader}>
@@ -52,6 +56,7 @@ export function App() {
         <Route path="/caretakers" element={owner(<Caretakers />)} />
         <Route path="/subscription" element={owner(<Subscription />)} />
         <Route path="/support" element={<Support />} />
+        <Route path="/account" element={<Account />} />
       </Route>
     </Routes>
   );

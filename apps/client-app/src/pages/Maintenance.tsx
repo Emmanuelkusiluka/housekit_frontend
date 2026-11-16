@@ -1,4 +1,4 @@
-import { Paginated, req, roomBreadcrumb, useApi, useAuth, useToast } from "@housekit/app-kit";
+import { Paginated, fetchAll, req, roomBreadcrumb, useApi, useAuth, useToast } from "@housekit/app-kit";
 import { useTranslation } from "@housekit/i18n";
 import {
   Button,
@@ -36,9 +36,9 @@ export function Maintenance() {
     queryFn: () => req<Paginated<MaintenanceRequest>>(api, "GET", "/api/v1/maintenance/"),
   });
   const houses = useQuery({
-    queryKey: ["houses"],
+    queryKey: ["houses", "all"],
     enabled: show,
-    queryFn: () => req<Paginated<House>>(api, "GET", "/api/v1/houses/"),
+    queryFn: () => fetchAll<House>(api, "/api/v1/houses/", { ordering: "name" }),
   });
 
   const create = useMutation({
@@ -105,7 +105,7 @@ export function Maintenance() {
           ))}
         </div>
       ) : (
-        <EmptyState icon={<Wrench className="h-10 w-10" />} title={t("maintenance.noRequests")} />
+        <EmptyState icon={<Wrench />} title={t("maintenance.noRequests")} description={t("ux.maintenanceEmptyBody")} />
       )}
 
       <Modal
@@ -131,7 +131,7 @@ export function Maintenance() {
           <Field label={t("portfolio.house")}>
             <Select value={form.house_public_id} onChange={(e) => setForm({ ...form, house_public_id: e.target.value })}>
               <option value="">—</option>
-              {houses.data?.results.map((h) => (
+              {houses.data?.map((h) => (
                 <option key={h.public_id} value={h.public_id}>
                   {h.name}
                 </option>

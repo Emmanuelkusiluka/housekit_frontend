@@ -87,14 +87,14 @@ export function PageHeader({
   action,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
 }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="font-display text-xl font-semibold text-ink md:text-2xl">{title}</h1>
-        {description && <p className="mt-0.5 text-sm text-ink-muted">{description}</p>}
+        {description && <div className="mt-0.5 text-sm text-ink-muted">{description}</div>}
       </div>
       {action}
     </div>

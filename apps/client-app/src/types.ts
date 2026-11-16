@@ -122,6 +122,8 @@ export interface RentCharge {
 export interface Receipt {
   public_id: string;
   number: string;
+  payment: string;
+  is_void: boolean;
   resident_name: string;
   unit_label: string;
   house_name: string;
@@ -155,6 +157,8 @@ export interface Expense {
   compound: string | null;
   house: string | null;
   recorded_by: string;
+  is_void: boolean;
+  void_reason?: string;
   created_at: string;
 }
 

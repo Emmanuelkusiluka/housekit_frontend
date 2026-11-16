@@ -1,0 +1,362 @@
+From 9c73db4c158d4b73cd287c507503f49995054043 Mon Sep 17 00:00:00 2001
+From: Emmanuel Kusiluka <emmanuelkusiluka@gmail.com>
+Date: Fri, 6 Nov 2026 09:37:31 +0000
+Subject: [PATCH] Fix N+1 queries on list endpoints; add set-password links to
+ emails
+
+- RentCharge.paid_total: annotate in SQL on ledger, charges and portal
+  charges list views (ledger 125 -> 3 queries, charges 203 -> 3 at ~120 tenants)
+- Leases: prefetch signatures (103 -> 4 queries) and order by newest
+- Houses/compounds: annotate unit/house counts instead of a COUNT per row
+- House units action: select_related house + compound
+- Houses searchable by compound name; tenancies searchable by resident/room
+- Stable default ordering for paginated houses, compounds, assignments
+- Invite and password-reset emails include a one-tap link to the
+  frontend set-password page (ref + code prefilled)
+- Regression test: list endpoints must use a constant number of queries
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01EHwHgCAm7GrLkV2rYVju1Z
+---
+ apps/payments/models.py        | 25 +++++++++++++
+ apps/payments/views.py         | 12 ++++--
+ apps/properties/serializers.py |  8 +++-
+ apps/properties/views.py       | 21 ++++++++++-
+ apps/tenancies/views.py        | 24 ++++++++----
+ apps/users/services.py         | 13 +++++++
+ tests/test_query_counts.py     | 68 ++++++++++++++++++++++++++++++++++
+ 7 files changed, 156 insertions(+), 15 deletions(-)
+ create mode 100644 tests/test_query_counts.py
+
+diff --git a/apps/payments/models.py b/apps/payments/models.py
+index e070786..8012fc8 100644
+--- a/apps/payments/models.py
++++ b/apps/payments/models.py
+@@ -37,15 +37,40 @@ class RentCharge(TenantScoped):
+ 
+     @property
+     def paid_total(self) -> Decimal:
++        # List endpoints annotate this in SQL (see `with_paid_total`) so a page
++        # of N charges costs one query instead of N aggregate queries.
++        annotated = getattr(self, "annotated_paid_total", None)
++        if annotated is not None:
++            return annotated
+         # Voided payments never count toward the balance (audit §01b).
+         agg = self.payments.filter(is_void=False).aggregate(total=models.Sum("amount"))
+         return agg["total"] or Decimal("0")
+ 
++
+     @property
+     def balance(self) -> Decimal:
+         return self.amount_due - self.paid_total
+ 
+ 
++def with_paid_total(qs):
++    """Annotate each charge's non-void paid total in one query.
++
++    Use only on read-only list/report querysets: the value is a snapshot, so a
++    view that records a payment and then reads `paid_total` must use a fresh,
++    un-annotated instance.
++    """
++    from django.db.models import DecimalField, Q, Sum, Value
++    from django.db.models.functions import Coalesce
++
++    return qs.annotate(
++        annotated_paid_total=Coalesce(
++            Sum("payments__amount", filter=Q(payments__is_void=False)),
++            Value(Decimal("0")),
++            output_field=DecimalField(max_digits=12, decimal_places=2),
++        )
++    )
++
++
+ class PaymentMethod(models.TextChoices):
+     CASH = "cash", "Cash"
+     MOBILE_MONEY = "mobile_money", "Mobile money"
+diff --git a/apps/payments/views.py b/apps/payments/views.py
+index 2b8abfb..d9a8949 100644
+--- a/apps/payments/views.py
++++ b/apps/payments/views.py
+@@ -11,7 +11,7 @@ from apps.common.permissions import IsAdminOrCaretaker, IsResident
+ from apps.common.reversals import VoidReasonSerializer, can_reverse
+ from apps.common.tenancy import get_current_account_id
+ 
+-from .models import PaymentNotice, Receipt, RentCharge, RentPayment
++from .models import PaymentNotice, Receipt, RentCharge, RentPayment, with_paid_total
+ from .serializers import (
+     LedgerRowSerializer,
+     PayChargeSerializer,
+@@ -57,6 +57,8 @@ class RentChargeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
+             "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
+             "tenancy__unit__house__compound",
+         )
++        if self.action == "list":
++            qs = with_paid_total(qs)
+         tenancy_pid = self.request.query_params.get("tenancy")
+         if tenancy_pid:
+             qs = qs.filter(tenancy__public_id=tenancy_pid)
+@@ -155,7 +157,7 @@ class LedgerView(APIView):
+         )
+         charges = {
+             c.tenancy_id: c
+-            for c in RentCharge.objects.filter(period_month=period).select_related("tenancy")
++            for c in with_paid_total(RentCharge.objects.filter(period_month=period))
+         }
+ 
+         rows = []
+@@ -194,9 +196,11 @@ class MyChargesViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewset
+     def get_queryset(self):
+         if get_current_account_id() is None:
+             return RentCharge.all_objects.none()
+-        return RentCharge.objects.select_related(
+-            "tenancy", "tenancy__resident", "tenancy__unit"
++        qs = RentCharge.objects.select_related(
++            "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
++            "tenancy__unit__house__compound",
+         ).filter(tenancy__resident__user=self.request.user)
++        return with_paid_total(qs) if self.action == "list" else qs
+ 
+ 
+ @extend_schema(tags=["tenant-portal"])
+diff --git a/apps/properties/serializers.py b/apps/properties/serializers.py
+index a434668..e696f11 100644
+--- a/apps/properties/serializers.py
++++ b/apps/properties/serializers.py
+@@ -13,7 +13,9 @@ class CompoundSerializer(PublicModelSerializer):
+         fields = ["public_id", "name", "address", "notes", "house_count", "created_at"]
+ 
+     def get_house_count(self, obj) -> int:
+-        return obj.houses.count()
++        # Annotated on list (CompoundViewSet.get_queryset) — avoids 1 query/row.
++        annotated = getattr(obj, "annotated_house_count", None)
++        return annotated if annotated is not None else obj.houses.count()
+ 
+ 
+ class HouseSerializer(PublicModelSerializer):
+@@ -50,7 +52,9 @@ class HouseSerializer(PublicModelSerializer):
+         return obj.compound.name if obj.compound_id else None
+ 
+     def get_unit_count(self, obj) -> int:
+-        return obj.units.count()
++        # Annotated on list (HouseViewSet.get_queryset) — avoids 1 query/row.
++        annotated = getattr(obj, "annotated_unit_count", None)
++        return annotated if annotated is not None else obj.units.count()
+ 
+ 
+ class UnitSerializer(PublicModelSerializer):
+diff --git a/apps/properties/views.py b/apps/properties/views.py
+index 459a244..415230b 100644
+--- a/apps/properties/views.py
++++ b/apps/properties/views.py
+@@ -1,3 +1,4 @@
++from django.db.models import Count
+ from django.utils import timezone
+ from drf_spectacular.utils import extend_schema
+ from rest_framework import status
+@@ -55,6 +56,13 @@ class CompoundViewSet(TenantViewSet):
+     permission_classes = [CaretakerReadOnly]
+     search_fields = ["name", "address"]
+     ordering_fields = ["name", "created_at"]
++    ordering = ["name"]
++
++    def get_queryset(self):
++        qs = super().get_queryset()
++        if self.action == "list":
++            qs = qs.annotate(annotated_house_count=Count("houses", distinct=True))
++        return qs
+ 
+     @extend_schema(responses=OccupancySerializer)
+     @action(detail=True, methods=["get"])
+@@ -79,8 +87,16 @@ class HouseViewSet(TenantViewSet):
+     select_related_fields = ("compound",)
+     caretaker_house_path = "id"  # a caretaker only sees their assigned houses
+     filterset_class = HouseFilter
+-    search_fields = ["name", "address"]
++    # Search by compound too ("Block A") — owners think in compounds.
++    search_fields = ["name", "address", "compound__name"]
+     ordering_fields = ["name", "created_at"]
++    ordering = ["name"]
++
++    def get_queryset(self):
++        qs = super().get_queryset()
++        if self.action == "list":
++            qs = qs.annotate(annotated_unit_count=Count("units", distinct=True))
++        return qs
+ 
+     def perform_create(self, serializer):
+         data = serializer.validated_data
+@@ -104,7 +120,7 @@ class HouseViewSet(TenantViewSet):
+     @action(detail=True, methods=["get"])
+     def units(self, request, public_id=None):
+         house = self.get_object()
+-        units = house.units.all().order_by("label")
++        units = house.units.select_related("house", "house__compound").order_by("label")
+         return Response(UnitSerializer(units, many=True).data)
+ 
+     @extend_schema(responses=OccupancySerializer)
+@@ -182,6 +198,7 @@ class CaretakerAssignmentViewSet(TenantViewSet):
+     permission_classes = [IsClientAdmin]
+     select_related_fields = ("caretaker", "house")
+     filterset_fields: list = []
++    ordering = ["house__name"]
+ 
+     def perform_create(self, serializer):
+         from apps.users.models import Role, User
+diff --git a/apps/tenancies/views.py b/apps/tenancies/views.py
+index 3123cc1..436cf5d 100644
+--- a/apps/tenancies/views.py
++++ b/apps/tenancies/views.py
+@@ -33,6 +33,7 @@ class TenancyViewSet(TenantViewSet):
+     select_related_fields = ("unit", "unit__house", "unit__house__compound", "resident", "lease")
+     caretaker_house_path = "unit__house"  # caretakers see only assigned houses (§A)
+     filterset_fields = ["status"]
++    search_fields = ["resident__full_name", "resident__phone", "unit__label", "unit__house__name"]
+     ordering_fields = ["start_date", "end_date", "created_at"]
+ 
+     def get_serializer_class(self):
+@@ -102,9 +103,13 @@ class LeaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
+     def get_queryset(self):
+         if get_current_account_id() is None:
+             return Lease.all_objects.none()
+-        return Lease.objects.select_related(
+-            "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
+-            "tenancy__unit__house__compound",
++        return (
++            Lease.objects.select_related(
++                "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
++                "tenancy__unit__house__compound",
++            )
++            .prefetch_related("signatures")
++            .order_by("-created_at")
+         )
+ 
+     @extend_schema(request=None, responses=LeaseSerializer)
+@@ -126,10 +131,15 @@ class MyLeaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
+     def get_queryset(self):
+         if get_current_account_id() is None:
+             return Lease.all_objects.none()
+-        return Lease.objects.select_related(
+-            "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
+-            "tenancy__unit__house__compound",
+-        ).filter(tenancy__resident__user=self.request.user)
++        return (
++            Lease.objects.select_related(
++                "tenancy", "tenancy__resident", "tenancy__unit", "tenancy__unit__house",
++                "tenancy__unit__house__compound",
++            )
++            .prefetch_related("signatures")
++            .filter(tenancy__resident__user=self.request.user)
++            .order_by("-created_at")
++        )
+ 
+     @extend_schema(request=SignLeaseSerializer, responses=LeaseSerializer)
+     @action(detail=True, methods=["post"])
+diff --git a/apps/users/services.py b/apps/users/services.py
+index b816707..a3c33b3 100644
+--- a/apps/users/services.py
++++ b/apps/users/services.py
+@@ -33,7 +33,18 @@ def invite_user(*, account, email, full_name, role, phone="", locale="en") -> Us
+ def send_set_password_email(user: User, template_key: str = "password_reset") -> None:
+     from apps.comms.services import send_email
+ 
++    from urllib.parse import urlencode
++
++    from django.conf import settings
++
+     token = default_token_generator.make_token(user)
++    # A one-tap link to the frontend's set-password screen, which reads
++    # `ref` + `code` from the query string. Residents use the tenant portal;
++    # owners/caretakers use the client app. The code is still in the body for
++    # anyone who prefers to type it.
++    base = settings.FRONTEND_TENANT_URL if user.role == "resident" else settings.FRONTEND_CLIENT_URL
++    path = "/set-password" if template_key == "user_invite" else "/forgot-password"
++    link = f"{base.rstrip('/')}{path}?{urlencode({'ref': user.public_id, 'code': token})}"
+     send_email(
+         template_key=template_key,
+         to=user.email,
+@@ -42,6 +53,8 @@ def send_set_password_email(user: User, template_key: str = "password_reset") ->
+             "public_id": user.public_id,
+             "token": token,
+             "role": user.role,
++            "reset_url": link,
++            "invite_url": link,
+         },
+         locale=user.locale,
+         account=user.account,
+diff --git a/tests/test_query_counts.py b/tests/test_query_counts.py
+new file mode 100644
+index 0000000..6b0298e
+--- /dev/null
++++ b/tests/test_query_counts.py
+@@ -0,0 +1,68 @@
++"""Guard against N+1 regressions on the list endpoints owners hit most.
++
++Each endpoint must cost a constant number of queries no matter how many rows
++it returns — a pilot account with ~100 tenants made the ledger and charges
++pages issue 100–200 queries before these were fixed.
++"""
++
++from datetime import date
++from decimal import Decimal
++
++import pytest
++from django.db import connection
++from django.test.utils import CaptureQueriesContext
++
++from apps.common.tenancy import account_context
++from apps.tenancies.services import register_tenancy
++from tests.factories import CompoundFactory, HouseFactory, ResidentFactory, UnitFactory
++
++pytestmark = pytest.mark.django_db
++
++
++def _seed(account, owner, houses=3, rooms=4):
++    with account_context(account.id):
++        compound = CompoundFactory(account=account)
++        for h in range(houses):
++            house = HouseFactory(account=account, compound=compound)
++            for r in range(rooms):
++                unit = UnitFactory(account=account, house=house, monthly_rent=Decimal("100000"))
++                register_tenancy(
++                    account=account,
++                    unit=unit,
++                    resident=ResidentFactory(account=account),
++                    start_date=date.today().replace(day=1),
++                    contract_months=3,
++                    recorded_by=owner,
++                )
++
++
++def _count(client, path):
++    with CaptureQueriesContext(connection) as ctx:
++        res = client.get(path)
++    assert res.status_code == 200, res.content
++    return len(ctx.captured_queries)
++
++
++@pytest.mark.parametrize(
++    "path",
++    [
++        "/api/v1/ledger/",
++        "/api/v1/charges/?page_size=100",
++        "/api/v1/leases/?page_size=100",
++        "/api/v1/houses/?page_size=100",
++        "/api/v1/compounds/?page_size=100",
++        "/api/v1/residents/?page_size=100",
++        "/api/v1/tenancies/?page_size=100",
++        "/api/v1/units/?page_size=100",
++    ],
++)
++def test_list_query_count_is_constant(account_a, client_auth, path):
++    account, owner = account_a["account"], account_a["owner"]
++    client = client_auth(owner)
++
++    _seed(account, owner, houses=1, rooms=2)
++    small = _count(client, path)
++    _seed(account, owner, houses=3, rooms=5)
++    large = _count(client, path)
++
++    assert large == small, f"{path}: {small} queries for few rows, {large} for many (N+1)"
+-- 
+2.43.0
+

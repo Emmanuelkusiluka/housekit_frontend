@@ -6,6 +6,7 @@ export function Login() {
   const { t } = useTranslation();
   return (
     <LoginScreen
+      passwordLinks
       footer={
         <span>
           {t("auth.signupTitle")}?{" "}

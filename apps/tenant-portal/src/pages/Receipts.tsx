@@ -47,7 +47,7 @@ export function Receipts() {
           ))}
         </div>
       ) : (
-        <EmptyState icon={<ReceiptIcon className="h-10 w-10" />} title={t("common.noResults")} />
+        <EmptyState icon={<ReceiptIcon />} title={t("ux.portalNoReceipts")} description={t("ux.portalNoReceiptsBody")} />
       )}
     </div>
   );
